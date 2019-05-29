@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Windows.Forms;
 using Microsoft.VisualBasic.Devices;
 
@@ -36,12 +35,6 @@ namespace FileExplorer
         private LinkedList<(string, bool)> mTmpItemList;
 
 
-        // Define the cancellation token source & token as global objects 
-        CancellationTokenSource cts = new CancellationTokenSource();
-
-
-
-
 
         public MainForm()
         {
@@ -63,7 +56,11 @@ namespace FileExplorer
 
         public void ClosePreviousInstance()
         {
-            Process[] pname = Process.GetProcessesByName(AppDomain.CurrentDomain.FriendlyName.Remove(AppDomain.CurrentDomain.FriendlyName.Length - 4));
+            Process[] pname = Process.GetProcessesByName(AppDomain
+                .CurrentDomain
+                .FriendlyName
+                .Remove(AppDomain.CurrentDomain.FriendlyName.Length - 4));
+
             if (pname.Length > 1)
                 pname.First(p => p.Id != Process.GetCurrentProcess().Id).Kill();
         }
@@ -423,7 +420,7 @@ namespace FileExplorer
                 mStatusBarFileNum.Text = "0 items";
                 mSearchFileName = fileName.ToLower();
 
-                SearchWithOneThread();
+                Search();
             }
         }
 
@@ -701,89 +698,22 @@ namespace FileExplorer
         }
 
 
-        private async void SearchWithMultiThread(string path)
-        {
-            ThreadPool.SetMaxThreads(10, 5);
-            //
-            //            //Открыть поток 
-            ThreadPool.QueueUserWorkItem(new WaitCallback(Search), path);
-            //            token = source.Token;
-            //            await Task.Run(() => Search(path, token), token);
-        }
-
-
-        //Многопоточный поиск.
-        private void Search(object obj)
-        {
-            string path = obj.ToString();
-            DirectoryInfo directoryInfo = new DirectoryInfo(path);
-
-            //Поиск среди файлов.
-            foreach (FileInfo file in directoryInfo.GetFiles())
-            {
-                var attr = File.GetAttributes(file.FullName);
-                if (attr.HasFlag(FileAttributes.System)
-                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                {
-                    continue;
-                }
-
-                if (file.Name.ToLower().Contains(mSearchFileName))
-                {
-                    AddItemOnListView(file.FullName, true);
-                    mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-                }
-            }
-
-
-            //Поиск среди папок.
-            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
-            {
-                try
-                {
-                    var attr = File.GetAttributes(dir.FullName);
-                    if (attr.HasFlag(FileAttributes.System)
-                        || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                    {
-                        continue;
-                    }
-
-                    if (dir.Name.ToLower().Contains(mSearchFileName))
-                    {
-                        AddItemOnListView(dir.FullName, false);
-                        mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-                    }
-
-                    //Рекурсивный вызов в отдельном потоке.
-                    //                    await Task.Run(() => Search(dir.FullName, token), token);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(Search), dir.FullName);
-                    if (cts.Token.IsCancellationRequested)
-                        return;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Console.WriteLine(ex.StackTrace);
-                }
-            }
-        }
-
-        public void SearchWithOneThread()
+        public void Search()
         {
             mListViewFiles.BeginUpdate();
 
-            SearchWithOneThread(mCurrentPath);
+            Search(mCurrentPath);
             foreach ((string, bool) tuple in mTmpItemList)
             {
                 AddItemOnListView(tuple.Item1, tuple.Item2);
             }
+
             mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
             mListViewFiles.EndUpdate();
         }
 
 
-        //Поиск в одном потоке.
-        public void SearchWithOneThread(string path)
+        public void Search(string path)
         {
             DirectoryInfo directoryInfo = new DirectoryInfo(path);
             FileInfo[] fileInfos = directoryInfo.GetFiles();
@@ -826,13 +756,8 @@ namespace FileExplorer
                     //                    mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
                 }
 
-                SearchWithOneThread(dir.FullName);
+                Search(dir.FullName);
             }
-        }
-
-        private void CancelToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            cts.Cancel();
         }
     }
 }

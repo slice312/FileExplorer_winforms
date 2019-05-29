@@ -37,7 +37,6 @@
             this.mViewTsmi = new System.Windows.Forms.ToolStripMenuItem();
             this.mRefreshMain = new System.Windows.Forms.ToolStripMenuItem();
             this.mHiddenFilesTsmi = new System.Windows.Forms.ToolStripMenuItem();
-            this.mStopBackgroundThreads = new System.Windows.Forms.ToolStripMenuItem();
             this.mMainToolStrip = new System.Windows.Forms.ToolStrip();
             this.mUpArrowBtn = new System.Windows.Forms.ToolStripButton();
             this.mAddressInput = new System.Windows.Forms.ToolStripComboBox();
@@ -77,12 +76,11 @@
             this.mMainMenuStrip.Font = new System.Drawing.Font("Microsoft YaHei", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.mMainMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFileTsmi,
-            this.mViewTsmi,
-            this.mStopBackgroundThreads});
+            this.mViewTsmi});
             this.mMainMenuStrip.Location = new System.Drawing.Point(0, 0);
             this.mMainMenuStrip.Name = "mMainMenuStrip";
             this.mMainMenuStrip.Padding = new System.Windows.Forms.Padding(7, 2, 0, 2);
-            this.mMainMenuStrip.Size = new System.Drawing.Size(899, 25);
+            this.mMainMenuStrip.Size = new System.Drawing.Size(984, 25);
             this.mMainMenuStrip.TabIndex = 0;
             this.mMainMenuStrip.Text = "menuStrip1";
             // 
@@ -99,21 +97,21 @@
             // mNewFolderMain
             // 
             this.mNewFolderMain.Name = "mNewFolderMain";
-            this.mNewFolderMain.Size = new System.Drawing.Size(141, 22);
+            this.mNewFolderMain.Size = new System.Drawing.Size(180, 22);
             this.mNewFolderMain.Text = "New folder";
             this.mNewFolderMain.Click += new System.EventHandler(this.NewFolder_Click);
             // 
             // mNewFileMain
             // 
             this.mNewFileMain.Name = "mNewFileMain";
-            this.mNewFileMain.Size = new System.Drawing.Size(141, 22);
+            this.mNewFileMain.Size = new System.Drawing.Size(180, 22);
             this.mNewFileMain.Text = "New file";
             this.mNewFileMain.Click += new System.EventHandler(this.NewFile_Click);
             // 
             // mPasteMain
             // 
             this.mPasteMain.Name = "mPasteMain";
-            this.mPasteMain.Size = new System.Drawing.Size(141, 22);
+            this.mPasteMain.Size = new System.Drawing.Size(180, 22);
             this.mPasteMain.Text = "Paste";
             this.mPasteMain.Click += new System.EventHandler(this.Paste_Click);
             // 
@@ -141,14 +139,6 @@
             this.mHiddenFilesTsmi.Text = "Hidden files";
             this.mHiddenFilesTsmi.CheckStateChanged += new System.EventHandler(this.HiddenFilesTsmi_CheckStateChanged);
             // 
-            // mStopBackgroundThreads
-            // 
-            this.mStopBackgroundThreads.Name = "mStopBackgroundThreads";
-            this.mStopBackgroundThreads.Size = new System.Drawing.Size(58, 21);
-            this.mStopBackgroundThreads.Text = "Cancel";
-            this.mStopBackgroundThreads.Visible = false;
-            this.mStopBackgroundThreads.Click += new System.EventHandler(this.CancelToolStripMenuItem_Click);
-            // 
             // mMainToolStrip
             // 
             this.mMainToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
@@ -158,7 +148,7 @@
             this.mSearchInput});
             this.mMainToolStrip.Location = new System.Drawing.Point(0, 25);
             this.mMainToolStrip.Name = "mMainToolStrip";
-            this.mMainToolStrip.Size = new System.Drawing.Size(899, 27);
+            this.mMainToolStrip.Size = new System.Drawing.Size(984, 25);
             this.mMainToolStrip.TabIndex = 1;
             this.mMainToolStrip.Text = "toolStrip1";
             // 
@@ -169,7 +159,7 @@
             this.mUpArrowBtn.Image = global::FileExplorer.Resource.up_arrow;
             this.mUpArrowBtn.ImageTransparentColor = System.Drawing.Color.White;
             this.mUpArrowBtn.Name = "mUpArrowBtn";
-            this.mUpArrowBtn.Size = new System.Drawing.Size(23, 24);
+            this.mUpArrowBtn.Size = new System.Drawing.Size(23, 22);
             this.mUpArrowBtn.Click += new System.EventHandler(this.UpArrowBtn_Click);
             // 
             // mAddressInput
@@ -187,7 +177,7 @@
             // 
             this.mSearchInput.BackColor = System.Drawing.SystemColors.ControlLight;
             this.mSearchInput.Name = "mSearchInput";
-            this.mSearchInput.Size = new System.Drawing.Size(160, 23);
+            this.mSearchInput.Size = new System.Drawing.Size(160, 25);
             this.mSearchInput.Text = "Search...";
             this.mSearchInput.Enter += new System.EventHandler(this.SearchInput_Enter);
             this.mSearchInput.Leave += new System.EventHandler(this.SearchInput_Leave);
@@ -282,9 +272,9 @@
             // 
             this.mStatusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mStatusBarFileNum});
-            this.mStatusBar.Location = new System.Drawing.Point(0, 509);
+            this.mStatusBar.Location = new System.Drawing.Point(0, 499);
             this.mStatusBar.Name = "mStatusBar";
-            this.mStatusBar.Size = new System.Drawing.Size(899, 22);
+            this.mStatusBar.Size = new System.Drawing.Size(984, 22);
             this.mStatusBar.TabIndex = 2;
             // 
             // mStatusBarFileNum
@@ -296,7 +286,7 @@
             // splitContainer
             // 
             this.splitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer.Location = new System.Drawing.Point(0, 52);
+            this.splitContainer.Location = new System.Drawing.Point(0, 50);
             this.splitContainer.Name = "splitContainer";
             // 
             // splitContainer.Panel1
@@ -306,8 +296,8 @@
             // splitContainer.Panel2
             // 
             this.splitContainer.Panel2.Controls.Add(this.mListViewFiles);
-            this.splitContainer.Size = new System.Drawing.Size(899, 457);
-            this.splitContainer.SplitterDistance = 299;
+            this.splitContainer.Size = new System.Drawing.Size(984, 449);
+            this.splitContainer.SplitterDistance = 327;
             this.splitContainer.SplitterWidth = 5;
             this.splitContainer.TabIndex = 3;
             // 
@@ -320,7 +310,7 @@
             this.mDirectoryTreeView.Location = new System.Drawing.Point(0, 0);
             this.mDirectoryTreeView.Name = "mDirectoryTreeView";
             this.mDirectoryTreeView.SelectedImageIndex = 0;
-            this.mDirectoryTreeView.Size = new System.Drawing.Size(299, 457);
+            this.mDirectoryTreeView.Size = new System.Drawing.Size(327, 449);
             this.mDirectoryTreeView.TabIndex = 0;
             this.mDirectoryTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.DirectoryTreeView_BeforeExpand);
             this.mDirectoryTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DirectoryTreeView_AfterSelect);
@@ -340,7 +330,7 @@
             this.mListViewFiles.LabelEdit = true;
             this.mListViewFiles.Location = new System.Drawing.Point(0, 0);
             this.mListViewFiles.Name = "mListViewFiles";
-            this.mListViewFiles.Size = new System.Drawing.Size(595, 457);
+            this.mListViewFiles.Size = new System.Drawing.Size(652, 449);
             this.mListViewFiles.SmallImageList = this.mListIcons;
             this.mListViewFiles.TabIndex = 0;
             this.mListViewFiles.UseCompatibleStateImageBehavior = false;
@@ -372,7 +362,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 14F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(899, 531);
+            this.ClientSize = new System.Drawing.Size(984, 521);
             this.Controls.Add(this.splitContainer);
             this.Controls.Add(this.mStatusBar);
             this.Controls.Add(this.mMainToolStrip);
@@ -432,7 +422,6 @@
         private System.Windows.Forms.ToolStripMenuItem mHiddenFilesTsmi;
         private System.Windows.Forms.ToolStripMenuItem mNewFileContextMenu;
         private System.Windows.Forms.ToolStripMenuItem mRefreshContextMenu;
-        private System.Windows.Forms.ToolStripMenuItem mStopBackgroundThreads;
     }
 }
 
