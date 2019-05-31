@@ -97,21 +97,21 @@
             // mNewFolderMain
             // 
             this.mNewFolderMain.Name = "mNewFolderMain";
-            this.mNewFolderMain.Size = new System.Drawing.Size(180, 22);
+            this.mNewFolderMain.Size = new System.Drawing.Size(141, 22);
             this.mNewFolderMain.Text = "New folder";
             this.mNewFolderMain.Click += new System.EventHandler(this.NewFolder_Click);
             // 
             // mNewFileMain
             // 
             this.mNewFileMain.Name = "mNewFileMain";
-            this.mNewFileMain.Size = new System.Drawing.Size(180, 22);
+            this.mNewFileMain.Size = new System.Drawing.Size(141, 22);
             this.mNewFileMain.Text = "New file";
             this.mNewFileMain.Click += new System.EventHandler(this.NewFile_Click);
             // 
             // mPasteMain
             // 
             this.mPasteMain.Name = "mPasteMain";
-            this.mPasteMain.Size = new System.Drawing.Size(180, 22);
+            this.mPasteMain.Size = new System.Drawing.Size(141, 22);
             this.mPasteMain.Text = "Paste";
             this.mPasteMain.Click += new System.EventHandler(this.Paste_Click);
             // 
@@ -127,7 +127,7 @@
             // mRefreshMain
             // 
             this.mRefreshMain.Name = "mRefreshMain";
-            this.mRefreshMain.Size = new System.Drawing.Size(145, 22);
+            this.mRefreshMain.Size = new System.Drawing.Size(180, 22);
             this.mRefreshMain.Text = "Refresh";
             this.mRefreshMain.Click += new System.EventHandler(this.Refresh_Click);
             // 
@@ -135,7 +135,7 @@
             // 
             this.mHiddenFilesTsmi.CheckOnClick = true;
             this.mHiddenFilesTsmi.Name = "mHiddenFilesTsmi";
-            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(145, 22);
+            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(180, 22);
             this.mHiddenFilesTsmi.Text = "Hidden files";
             this.mHiddenFilesTsmi.CheckStateChanged += new System.EventHandler(this.HiddenFilesTsmi_CheckStateChanged);
             // 

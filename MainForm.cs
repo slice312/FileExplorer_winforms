@@ -5,6 +5,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Permissions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualBasic.Devices;
 
@@ -28,11 +32,13 @@ namespace FileExplorer
         //Исходный путь к файлам для копирования и вставки.
         private readonly List<string> mListSourcesPath;
 
+        //Хранит записи при поиске, чтобы сразу не помещать на ListView.
+        private LinkedList<(string, bool)> mTmpItemList;
+
         //Имя файла для поиска.
         private string mSearchFileName;
 
-        //Хранит записи при поиске, чтобы сразу не помещать на ListView.
-        private LinkedList<(string, bool)> mTmpItemList;
+        private TreeItem mFileTree;
 
 
 
@@ -52,6 +58,7 @@ namespace FileExplorer
             InitializeComponent();
             InitDisplay();
         }
+
 
 
         public void ClosePreviousInstance()
@@ -435,15 +442,54 @@ namespace FileExplorer
             Icon driveIcon = ShellIcon.GetDriveIcon();
             mListIcons.Images.Add("drive", driveIcon);
 
-            foreach (DriveInfo info in driveInfos)
+            //            {
+            //                DriveInfo info = driveInfos[0];
+            //                string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
+            //                label += $"({info.Name.Split('\\')[0]})";
+            //                TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
+            //                driveNode.Tag = info.Name;
+            //                driveNode.ImageKey = "drive";
+            //                driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
+            //            }
+
+            mFileTree = new TreeItem("ROOT", null);
             {
+                DriveInfo info = driveInfos[0];
                 string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
                 label += $"({info.Name.Split('\\')[0]})";
                 TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
                 driveNode.Tag = info.Name;
                 driveNode.ImageKey = "drive";
                 driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
+
+                TreeItem childNode = new TreeItem(info.Name, mFileTree);
+                mFileTree.AddChild(childNode);
+                try
+                {
+//                    ThreadPool.SetMaxThreads(25, 25);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadCustomNodes), childNode);
+//                    Thread obj = new Thread(LoadCustomNodes);
+//                    obj.Start(childNode);
+//
+//                    LoadCustomNodes(childNode);
+                    Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Console.WriteLine(ex.StackTrace);
+                }
+                Console.WriteLine($"\t\t\t\t\t\tFileTree loaded #2{TreeItem.Count}");
             }
+            //            foreach (DriveInfo info in driveInfos)
+            //            {
+            //                string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
+            //                label += $"({info.Name.Split('\\')[0]})";
+            //                TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
+            //                driveNode.Tag = info.Name;
+            //                driveNode.ImageKey = "drive";
+            //                driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
+            //            }
 
             //Для всех папок одинаковая иконка.
             Icon folderIcon = ShellIcon.GetFolderIcon();
@@ -465,6 +511,10 @@ namespace FileExplorer
                 //Cписок папок.
                 foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
                 {
+//                    DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
+//                    if (security.AreAccessRulesProtected)
+//                        continue;
+
                     var attr = File.GetAttributes(dir.FullName);
                     if (attr.HasFlag(FileAttributes.System)
                         || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
@@ -486,6 +536,53 @@ namespace FileExplorer
         }
 
 
+        //TODO загрузка в дерево для поиска
+        private async void LoadCustomNodes(object _node)
+        {
+            TreeItem node = (TreeItem) _node;
+            DirectoryInfo directoryInfo = new DirectoryInfo(node.ItemData);
+            FileInfo[] fileInfos = directoryInfo.GetFiles();
+            DirectoryInfo[] directoryInfos = directoryInfo.GetDirectories();
+
+            FileAttributes attr;
+
+
+            foreach (FileInfo file in fileInfos)
+            {
+                attr = File.GetAttributes(file.FullName);
+                if (attr.HasFlag(FileAttributes.System)
+                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
+                {
+                    continue;
+                }
+
+                TreeItem childNode = new TreeItem(file.FullName, node);
+                node.AddChild(childNode);
+            }
+
+
+            foreach (DirectoryInfo dir in directoryInfos)
+            {
+                DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
+                if (security.AreAccessRulesProtected)
+                    continue;
+
+                attr = File.GetAttributes(dir.FullName);
+                if (attr.HasFlag(FileAttributes.System)
+                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
+                {
+                    continue;
+                }
+
+
+                TreeItem childNode = new TreeItem(dir.FullName, node);
+                node.AddChild(childNode);
+                await Task.Run(() => LoadCustomNodes(childNode));
+//                LoadCustomNodes(childNode);
+            }
+        }
+
+
         //Загрузить список файлов на ListView
         public void ShowFilesList(string path)
         {
@@ -502,6 +599,10 @@ namespace FileExplorer
                 //Cписок папок.
                 foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
                 {
+//                    DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
+//                    if (security.AreAccessRulesProtected)
+//                        continue;
+
                     var attr = File.GetAttributes(dir.FullName);
                     if (attr.HasFlag(FileAttributes.System)
                         || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
