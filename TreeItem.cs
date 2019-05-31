@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 
 namespace FileExplorer
@@ -10,12 +11,13 @@ namespace FileExplorer
         private List<TreeItem> mChildItems;
         public string ItemData { get; set; }
 
-        public static int Count { get; private set; } = 0;
+        static int _count = 0;
+        public static int Count => _count;
 
 
         public TreeItem(string data, TreeItem parent = null)
         {
-            Count++;
+            Interlocked.Increment(ref _count);
             this.mParentItem = parent;
             this.ItemData = data;
             mChildItems = new List<TreeItem>(); //TODO capacity

@@ -6,7 +6,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
-using System.Security.Permissions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -38,8 +37,8 @@ namespace FileExplorer
         //Имя файла для поиска.
         private string mSearchFileName;
 
+        //Дерево со всеми файловыми записями.
         private TreeItem mFileTree;
-
 
 
         public MainForm()
@@ -58,7 +57,6 @@ namespace FileExplorer
             InitializeComponent();
             InitDisplay();
         }
-
 
 
         public void ClosePreviousInstance()
@@ -217,6 +215,13 @@ namespace FileExplorer
         {
             mShowHidden = mHiddenFilesTsmi.Checked;
             ShowFilesList(mCurrentPath);
+        }
+
+
+        private void FileTreeCountTsmi_Click(object sender, EventArgs e)
+        {
+            mFileEntryCountLabel.Text = TreeItem.Count.ToString();
+
         }
 
 
@@ -435,61 +440,35 @@ namespace FileExplorer
         private void InitDisplay()
         {
             Console.WriteLine("InitDisplay");
-            mDirectoryTreeView.Nodes.Clear();
-
-            DriveInfo[] driveInfos = DriveInfo.GetDrives();
-
-            Icon driveIcon = ShellIcon.GetDriveIcon();
-            mListIcons.Images.Add("drive", driveIcon);
-
-            //            {
-            //                DriveInfo info = driveInfos[0];
-            //                string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
-            //                label += $"({info.Name.Split('\\')[0]})";
-            //                TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
-            //                driveNode.Tag = info.Name;
-            //                driveNode.ImageKey = "drive";
-            //                driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
-            //            }
-
-            mFileTree = new TreeItem("ROOT", null);
+            try
             {
-                DriveInfo info = driveInfos[0];
-                string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
-                label += $"({info.Name.Split('\\')[0]})";
-                TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
-                driveNode.Tag = info.Name;
-                driveNode.ImageKey = "drive";
-                driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
+                ThreadPool.SetMaxThreads(25, 25);
 
-                TreeItem childNode = new TreeItem(info.Name, mFileTree);
-                mFileTree.AddChild(childNode);
-                try
+                Icon driveIcon = ShellIcon.GetDriveIcon();
+                mListIcons.Images.Add("drive", driveIcon);
+
+                mFileTree = new TreeItem("ROOT", null);
+
+                foreach (DriveInfo info in DriveInfo.GetDrives())
                 {
-//                    ThreadPool.SetMaxThreads(25, 25);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadCustomNodes), childNode);
-//                    Thread obj = new Thread(LoadCustomNodes);
-//                    obj.Start(childNode);
-//
-//                    LoadCustomNodes(childNode);
-                    Thread.Sleep(5000);
+                    string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
+                    label += $"({info.Name.Split('\\')[0]})";
+                    TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
+                    driveNode.Tag = info.Name;
+                    driveNode.ImageKey = "drive";
+                    driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
+
+                    //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
+                    TreeItem childNode = new TreeItem(@"\\?\" + info.Name, mFileTree);
+                    mFileTree.AddChild(childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Console.WriteLine(ex.StackTrace);
-                }
-                Console.WriteLine($"\t\t\t\t\t\tFileTree loaded #2{TreeItem.Count}");
             }
-            //            foreach (DriveInfo info in driveInfos)
-            //            {
-            //                string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
-            //                label += $"({info.Name.Split('\\')[0]})";
-            //                TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
-            //                driveNode.Tag = info.Name;
-            //                driveNode.ImageKey = "drive";
-            //                driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
-            //            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Console.WriteLine(ex.StackTrace);
+            }
 
             //Для всех папок одинаковая иконка.
             Icon folderIcon = ShellIcon.GetFolderIcon();
@@ -523,7 +502,7 @@ namespace FileExplorer
                     }
 
                     TreeNode childNode = node.Nodes.Add(dir.Name);
-                    childNode.Tag = dir.FullName; //TODO Tag - реальный путь.
+                    childNode.Tag = dir.FullName;
                     childNode.ImageKey = "folder";
                     childNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
                 }
@@ -537,48 +516,36 @@ namespace FileExplorer
 
 
         //TODO загрузка в дерево для поиска
-        private async void LoadCustomNodes(object _node)
+        private void LoadFileTree(object _node)
         {
             TreeItem node = (TreeItem) _node;
-            DirectoryInfo directoryInfo = new DirectoryInfo(node.ItemData);
-            FileInfo[] fileInfos = directoryInfo.GetFiles();
-            DirectoryInfo[] directoryInfos = directoryInfo.GetDirectories();
 
-            FileAttributes attr;
-
-
-            foreach (FileInfo file in fileInfos)
+            foreach (string entry in Directory.GetFileSystemEntries(node.ItemData))
             {
-                attr = File.GetAttributes(file.FullName);
+                if (entry == @"\\?\C:\Windows") continue;
+
+                FileAttributes attr = File.GetAttributes(entry);
                 if (attr.HasFlag(FileAttributes.System)
                     || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
                 {
                     continue;
                 }
 
-                TreeItem childNode = new TreeItem(file.FullName, node);
-                node.AddChild(childNode);
-            }
+                TreeItem childNode;
 
-
-            foreach (DirectoryInfo dir in directoryInfos)
-            {
-                DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
-                if (security.AreAccessRulesProtected)
-                    continue;
-
-                attr = File.GetAttributes(dir.FullName);
-                if (attr.HasFlag(FileAttributes.System)
-                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
+                if (attr.HasFlag(FileAttributes.Directory))
                 {
-                    continue;
+//                    DirectorySecurity security = Directory.GetAccessControl(entry);
+//                        if (security.AreAccessRulesProtected) continue;
+                    childNode = new TreeItem(entry, node);
+                    node.AddChild(childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
                 }
-
-
-                TreeItem childNode = new TreeItem(dir.FullName, node);
-                node.AddChild(childNode);
-                await Task.Run(() => LoadCustomNodes(childNode));
-//                LoadCustomNodes(childNode);
+                else
+                {
+                    childNode = new TreeItem(entry, node);
+                    node.AddChild(childNode);
+                }
             }
         }
 
@@ -860,5 +827,7 @@ namespace FileExplorer
                 Search(dir.FullName);
             }
         }
+
+      
     }
 }

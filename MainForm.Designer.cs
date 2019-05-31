@@ -37,6 +37,7 @@
             this.mViewTsmi = new System.Windows.Forms.ToolStripMenuItem();
             this.mRefreshMain = new System.Windows.Forms.ToolStripMenuItem();
             this.mHiddenFilesTsmi = new System.Windows.Forms.ToolStripMenuItem();
+            this.mFileTreeCoundTsmi = new System.Windows.Forms.ToolStripMenuItem();
             this.mMainToolStrip = new System.Windows.Forms.ToolStrip();
             this.mUpArrowBtn = new System.Windows.Forms.ToolStripButton();
             this.mAddressInput = new System.Windows.Forms.ToolStripComboBox();
@@ -54,6 +55,7 @@
             this.mListIcons = new System.Windows.Forms.ImageList(this.components);
             this.mStatusBar = new System.Windows.Forms.StatusStrip();
             this.mStatusBarFileNum = new System.Windows.Forms.ToolStripStatusLabel();
+            this.mFileEntryCountLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.splitContainer = new System.Windows.Forms.SplitContainer();
             this.mDirectoryTreeView = new System.Windows.Forms.TreeView();
             this.mListViewFiles = new System.Windows.Forms.ListView();
@@ -76,7 +78,8 @@
             this.mMainMenuStrip.Font = new System.Drawing.Font("Microsoft YaHei", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.mMainMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFileTsmi,
-            this.mViewTsmi});
+            this.mViewTsmi,
+            this.mFileTreeCoundTsmi});
             this.mMainMenuStrip.Location = new System.Drawing.Point(0, 0);
             this.mMainMenuStrip.Name = "mMainMenuStrip";
             this.mMainMenuStrip.Padding = new System.Windows.Forms.Padding(7, 2, 0, 2);
@@ -127,7 +130,7 @@
             // mRefreshMain
             // 
             this.mRefreshMain.Name = "mRefreshMain";
-            this.mRefreshMain.Size = new System.Drawing.Size(180, 22);
+            this.mRefreshMain.Size = new System.Drawing.Size(145, 22);
             this.mRefreshMain.Text = "Refresh";
             this.mRefreshMain.Click += new System.EventHandler(this.Refresh_Click);
             // 
@@ -135,9 +138,16 @@
             // 
             this.mHiddenFilesTsmi.CheckOnClick = true;
             this.mHiddenFilesTsmi.Name = "mHiddenFilesTsmi";
-            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(180, 22);
+            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(145, 22);
             this.mHiddenFilesTsmi.Text = "Hidden files";
             this.mHiddenFilesTsmi.CheckStateChanged += new System.EventHandler(this.HiddenFilesTsmi_CheckStateChanged);
+            // 
+            // mFileTreeCoundTsmi
+            // 
+            this.mFileTreeCoundTsmi.Name = "mFileTreeCoundTsmi";
+            this.mFileTreeCoundTsmi.Size = new System.Drawing.Size(102, 21);
+            this.mFileTreeCoundTsmi.Text = "FileTree.Count";
+            this.mFileTreeCoundTsmi.Click += new System.EventHandler(this.FileTreeCountTsmi_Click);
             // 
             // mMainToolStrip
             // 
@@ -271,7 +281,8 @@
             // mStatusBar
             // 
             this.mStatusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mStatusBarFileNum});
+            this.mStatusBarFileNum,
+            this.mFileEntryCountLabel});
             this.mStatusBar.Location = new System.Drawing.Point(0, 499);
             this.mStatusBar.Name = "mStatusBar";
             this.mStatusBar.Size = new System.Drawing.Size(984, 22);
@@ -282,6 +293,12 @@
             this.mStatusBarFileNum.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.mStatusBarFileNum.Name = "mStatusBarFileNum";
             this.mStatusBarFileNum.Size = new System.Drawing.Size(0, 17);
+            // 
+            // mFileEntryCountLabel
+            // 
+            this.mFileEntryCountLabel.Name = "mFileEntryCountLabel";
+            this.mFileEntryCountLabel.Size = new System.Drawing.Size(29, 17);
+            this.mFileEntryCountLabel.Text = "Tree";
             // 
             // splitContainer
             // 
@@ -422,6 +439,8 @@
         private System.Windows.Forms.ToolStripMenuItem mHiddenFilesTsmi;
         private System.Windows.Forms.ToolStripMenuItem mNewFileContextMenu;
         private System.Windows.Forms.ToolStripMenuItem mRefreshContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem mFileTreeCoundTsmi;
+        private System.Windows.Forms.ToolStripStatusLabel mFileEntryCountLabel;
     }
 }
 
