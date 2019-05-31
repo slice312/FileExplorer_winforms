@@ -221,7 +221,6 @@ namespace FileExplorer
         private void FileTreeCountTsmi_Click(object sender, EventArgs e)
         {
             mFileEntryCountLabel.Text = TreeItem.Count.ToString();
-
         }
 
 
@@ -766,6 +765,36 @@ namespace FileExplorer
         }
 
 
+        public void SearchInTree(object _node)
+        {
+            TreeItem node = (TreeItem) _node;
+            foreach (TreeItem childNode in node.Childs)
+            {
+                string fullName = childNode.ItemData;
+                FileAttributes attr = File.GetAttributes(fullName);
+
+                string name = fullName.Split('\\').Last().ToLower();
+              
+
+                if (attr.HasFlag(FileAttributes.Directory))
+                {
+                    if (name == mSearchFileName)
+                    {
+                        mTmpItemList.AddLast((fullName, false));
+                    }
+                    SearchInTree(childNode);
+                }
+                else
+                {
+                    if (name == mSearchFileName)
+                    {
+                        mTmpItemList.AddLast((fullName, true));
+                    }
+                }
+            }
+        }
+
+
         public void Search()
         {
             mListViewFiles.BeginUpdate();
@@ -827,7 +856,5 @@ namespace FileExplorer
                 Search(dir.FullName);
             }
         }
-
-      
     }
 }
