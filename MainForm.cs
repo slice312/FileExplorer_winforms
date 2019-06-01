@@ -616,107 +616,64 @@ namespace FileExplorer
             mListViewFiles.EndUpdate();
         }
 
-
         private void AddItemOnListView(string fullPath, bool isFile)
         {
-            if (mListViewFiles.InvokeRequired)
+            if (isFile)
             {
-                mListViewFiles.Invoke(new MethodInvoker(delegate
+                FileInfo fileInfo = new FileInfo(fullPath);
+
+                ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
+
+
+                //Исполняемые файлы и ярлыки могут иметь разные иконки.
+                if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
+                    fileInfo.Extension == string.Empty)
                 {
-                    if (isFile)
+                    if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
                     {
-                        FileInfo fileInfo = new FileInfo(fullPath);
-
-                        ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
-
-
-                        //Исполняемые файлы и ярлыки могут иметь разные иконки.
-                        if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
-                            fileInfo.Extension == string.Empty)
-                        {
-                            if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
-                            {
-                                Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                                mListIcons.Images.Add(fileInfo.FullName, fileIcon);
-                            }
-
-                            item.ImageKey = fileInfo.FullName;
-                        }
-                        else
-                        {
-                            //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
-                            if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
-                            {
-                                Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                                mListIcons.Images.Add(fileInfo.Extension, fileIcon);
-                            }
-
-                            item.ImageKey = fileInfo.Extension;
-                        }
-
-                        item.Tag = fileInfo.FullName;
-                        item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                        item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
-                        item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
-                    }
-                    else
-                    {
-                        DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
-                        ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
-                        item.Tag = dirInfo.FullName;
-                        item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                        item.SubItems.Add("Folder");
-                        item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
-                    }
-                }));
-            }
-            else
-            {
-                if (isFile)
-                {
-                    FileInfo fileInfo = new FileInfo(fullPath);
-
-                    ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
-
-
-                    //Исполняемые файлы и ярлыки могут иметь разные иконки.
-                    if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
-                        fileInfo.Extension == string.Empty)
-                    {
-                        if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
-                        {
-                            Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                            mListIcons.Images.Add(fileInfo.FullName, fileIcon);
-                        }
-
-                        item.ImageKey = fileInfo.FullName;
-                    }
-                    else
-                    {
-                        //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
-                        if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
-                        {
-                            Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                            mListIcons.Images.Add(fileInfo.Extension, fileIcon);
-                        }
-
-                        item.ImageKey = fileInfo.Extension;
+                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                        mListIcons.Images.Add(fileInfo.FullName, fileIcon);
                     }
 
-                    item.Tag = fileInfo.FullName;
-                    item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                    item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
-                    item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
+                    item.ImageKey = fileInfo.FullName;
                 }
                 else
                 {
-                    DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
-                    ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
-                    item.Tag = dirInfo.FullName;
-                    item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                    item.SubItems.Add("Folder");
-                    item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
+                    //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
+                    if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
+                    {
+                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                        mListIcons.Images.Add(fileInfo.Extension, fileIcon);
+                    }
+
+                    item.ImageKey = fileInfo.Extension;
                 }
+
+                item.Tag = fileInfo.FullName;
+                item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
+                item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
+            }
+            else
+            {
+                DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
+                ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
+                item.Tag = dirInfo.FullName;
+                item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                item.SubItems.Add("Folder");
+                item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
+            }
+        }
+
+        private void AddItemOnListViewAsync(string fullPath, bool isFile)
+        {
+            if (mListViewFiles.InvokeRequired)
+            {
+                mListViewFiles.Invoke(new MethodInvoker(delegate { AddItemOnListView(fullPath, isFile); }));
+            }
+            else
+            {
+                AddItemOnListView(fullPath, isFile);
             }
         }
 
@@ -872,7 +829,7 @@ namespace FileExplorer
                     if (name.Contains(mSearchFileName))
                     {
 //                        mTmpItemList.Add((fullName, false));
-                        AddItemOnListView(fullName.Substring(4), false);
+                        AddItemOnListViewAsync(fullName.Substring(4), false);
                     }
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), childNode);
@@ -882,7 +839,7 @@ namespace FileExplorer
                 {
                     if (name.Contains(mSearchFileName))
                     {
-                        AddItemOnListView(fullName.Substring(4), true);
+                        AddItemOnListViewAsync(fullName.Substring(4), true);
 //                        mTmpItemList.Add((fullName, true));
                     }
                 }
