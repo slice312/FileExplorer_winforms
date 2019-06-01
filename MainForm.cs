@@ -52,7 +52,6 @@ namespace FileExplorer
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
             //            mTmpItemList = new ConcurrentBag<(string, bool)>();
-            mTreeCurrentNode = mFileTree;
             mIsMove = false;
             mShowHidden = false;
             mCurSelectedNode = null;
@@ -152,8 +151,13 @@ namespace FileExplorer
             }
 
             //Обновить виджеты.
-            ShowFilesList(mCurrentPath);
+//            ShowFilesList(mCurrentPath);
+//            LoadChildNodes(mCurSelectedNode);
+
             LoadChildNodes(mCurSelectedNode);
+            mTreeCurrentNode.Childs.Clear();
+            LoadFileTree(mTreeCurrentNode);
+            ShowFilesList(mCurrentPath);
         }
 
 
@@ -195,6 +199,14 @@ namespace FileExplorer
                                 File.Delete(path);
 
                             mListViewFiles.Items.Remove(item);
+//                            foreach (var childNode in mTreeCurrentNode.Childs)
+//                            {
+//                                if (childNode.ItemData.Split('\\').Last() == path.Split('\\').Last())
+//                                {
+//                                    mTreeCurrentNode.Childs.Remove(childNode);
+//                                }
+//                            }
+                            
                         }
 
                         LoadChildNodes(mCurSelectedNode);
@@ -381,6 +393,8 @@ namespace FileExplorer
             }
 
             LoadChildNodes(mCurSelectedNode);
+            mTreeCurrentNode.Childs.Clear();
+            LoadFileTree(mTreeCurrentNode);
             ShowFilesList(mCurrentPath);
         }
 
@@ -398,6 +412,16 @@ namespace FileExplorer
         {
             Console.WriteLine("DirectoryTreeView_AfterSelect");
             mCurSelectedNode = e.Node;
+            mTreeCurrentNode = mFileTree;
+            foreach (var childNode in mTreeCurrentNode.Childs)
+            {
+                if (childNode.ItemData == e.Node.Tag.ToString())
+                {
+                    mTreeCurrentNode = childNode;
+                    break;
+                }
+            }
+           
             ShowFilesList(e.Node.Tag.ToString());
         }
 
@@ -695,6 +719,14 @@ namespace FileExplorer
                     {
                         //Открыть папку.
                         mCurrentPath = path;
+                        foreach (var childNode in mTreeCurrentNode.Childs)
+                        {
+                            if (childNode.ItemData == path)
+                            {
+                                mTreeCurrentNode = childNode;
+                                break;
+                            }
+                        }
                         ShowFilesList(path);
                     }
                     else

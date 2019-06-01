@@ -7,7 +7,6 @@ namespace FileExplorer
 {
     public static class FileSystem
     {
-        //TODO копирование в отдельном потоке
         public static void CopyAndPasteDirectory(DirectoryInfo sourceDir, DirectoryInfo destDir)
         {
             //Является ли целевая папка подкаталогом исходной папки.
