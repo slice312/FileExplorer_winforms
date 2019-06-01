@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -32,7 +33,8 @@ namespace FileExplorer
         private readonly List<string> mListSourcesPath;
 
         //Хранит записи при поиске, чтобы сразу не помещать на ListView.
-        private LinkedList<(string, bool)> mTmpItemList;
+        private ConcurrentBag<(string, bool)> mTmpItemList;
+//        private LinkedList<(string, bool)> mTmpItemList;
 
         //Имя файла для поиска.
         private string mSearchFileName;
@@ -45,9 +47,7 @@ namespace FileExplorer
         {
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
-            mListSourcesPath.Clear();
-            mTmpItemList = new LinkedList<(string, bool)>();
-            mTmpItemList.Clear();
+            mTmpItemList = new ConcurrentBag<(string, bool)>();
             mIsMove = false;
             mShowHidden = false;
             mCurSelectedNode = null;
@@ -208,6 +208,7 @@ namespace FileExplorer
         {
             Console.WriteLine("Refresh_Click");
             ShowFilesList(mCurrentPath);
+            GetFileTreeNodeByCurrentPath();
         }
 
 
@@ -426,7 +427,11 @@ namespace FileExplorer
                 if (string.IsNullOrEmpty(fileName))
                     return;
 
-                mTmpItemList.Clear();
+                while (!mTmpItemList.IsEmpty)
+                {
+                    mTmpItemList.TryTake(out var someItem);
+                }
+
                 mListViewFiles.Items.Clear();
                 mStatusBarFileNum.Text = "0 items";
                 mSearchFileName = fileName.ToLower();
@@ -447,9 +452,10 @@ namespace FileExplorer
                 mListIcons.Images.Add("drive", driveIcon);
 
                 mFileTree = new TreeItem("ROOT", null);
-
+                int n = 0;
                 foreach (DriveInfo info in DriveInfo.GetDrives())
                 {
+                    if (n++ > 1) break;
                     string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
                     label += $"({info.Name.Split('\\')[0]})";
                     TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
@@ -765,7 +771,7 @@ namespace FileExplorer
         }
 
 
-        public void SearchInTree(object _node)
+        private async Task SearchInTree(object _node)
         {
             TreeItem node = (TreeItem) _node;
             foreach (TreeItem childNode in node.Childs)
@@ -774,87 +780,96 @@ namespace FileExplorer
                 FileAttributes attr = File.GetAttributes(fullName);
 
                 string name = fullName.Split('\\').Last().ToLower();
-              
+
 
                 if (attr.HasFlag(FileAttributes.Directory))
                 {
-                    if (name == mSearchFileName)
+                    if (name.Contains(mSearchFileName))
                     {
-                        mTmpItemList.AddLast((fullName, false));
+//                        AddItemOnListView(fullName.Substring(4), false);
+                        mTmpItemList.Add((fullName, false));
                     }
-                    SearchInTree(childNode);
+
+//                    ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), child);
+                    await SearchInTree(childNode);
+//                    var t1 = Task.Factory.StartNew(
+//                        () => SearchInTree(new TreeNode(nextLevel)));
                 }
                 else
                 {
-                    if (name == mSearchFileName)
+                    if (name.Contains(mSearchFileName))
                     {
-                        mTmpItemList.AddLast((fullName, true));
+//                        AddItemOnListView(fullName.Substring(4), true);
+                        mTmpItemList.Add((fullName, true));
                     }
                 }
             }
         }
 
 
-        public void Search()
+        private TreeItem GetFileTreeNodeByCurrentPath()
+        {
+            string[] parts = mCurrentPath.Split('\\');
+
+            TreeItem currentNode = null;
+
+            void NextNode(TreeItem _node, int step)
+            {
+                if (step >= parts.Length) return;
+
+                foreach (TreeItem childNode in _node.Childs)
+                {
+                    if (step == 0)
+                    {
+                        string name = childNode.ItemData.Split('\\')[3];
+                        if (name == parts[step])
+                        {
+                            currentNode = childNode;
+                            NextNode(childNode, step + 1);
+                        }
+                    }
+                    else
+                    {
+                        string name = childNode.ItemData.Split('\\').Last();
+                        if (name == parts[step])
+                        {
+                            currentNode = childNode;
+                            NextNode(childNode, step + 1);
+                        }
+                    }
+                }
+            }
+
+            NextNode(mFileTree, 0);
+            return currentNode;
+        }
+
+
+        private async Task Search()
         {
             mListViewFiles.BeginUpdate();
 
-            Search(mCurrentPath);
-            foreach ((string, bool) tuple in mTmpItemList)
+            TreeItem node = GetFileTreeNodeByCurrentPath();
+
+
+//            ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
+
+//            SearchInTree(node);
+            await SearchInTree(node);
+
+            foreach ((string path, bool isFile) tuple in mTmpItemList)
             {
-                AddItemOnListView(tuple.Item1, tuple.Item2);
+                AddItemOnListView(tuple.path.Substring(4), tuple.isFile);
+            }
+
+            Console.WriteLine("Joined ThreadPool");
+            if (mTmpItemList.IsEmpty)
+            {
+                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
             }
 
             mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
             mListViewFiles.EndUpdate();
-        }
-
-
-        public void Search(string path)
-        {
-            DirectoryInfo directoryInfo = new DirectoryInfo(path);
-            FileInfo[] fileInfos = directoryInfo.GetFiles();
-            DirectoryInfo[] directoryInfos = directoryInfo.GetDirectories();
-
-            //Поиск среди файлов.
-            foreach (FileInfo file in fileInfos)
-            {
-                var attr = File.GetAttributes(file.FullName);
-                if (attr.HasFlag(FileAttributes.System)
-                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                {
-                    continue;
-                }
-
-                if (file.Name.ToLower().Contains(mSearchFileName))
-                {
-                    mTmpItemList.AddLast((file.FullName, true));
-                    //                    AddItemOnListView(file.FullName, true);
-                    //                    mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-                }
-            }
-
-
-            //Поиск среди папок.
-            foreach (DirectoryInfo dir in directoryInfos)
-            {
-                var attr = File.GetAttributes(dir.FullName);
-                if (attr.HasFlag(FileAttributes.System)
-                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                {
-                    continue;
-                }
-
-
-                if (dir.Name.ToLower().Contains(mSearchFileName))
-                {
-                    mTmpItemList.AddLast((dir.FullName, false));
-                    //                    AddItemOnListView(dir.FullName, false);
-                    //                    mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-                }
-
-                Search(dir.FullName);
-            }
         }
     }
 }

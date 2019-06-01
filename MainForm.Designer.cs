@@ -37,7 +37,7 @@
             this.mViewTsmi = new System.Windows.Forms.ToolStripMenuItem();
             this.mRefreshMain = new System.Windows.Forms.ToolStripMenuItem();
             this.mHiddenFilesTsmi = new System.Windows.Forms.ToolStripMenuItem();
-            this.mFileTreeCoundTsmi = new System.Windows.Forms.ToolStripMenuItem();
+            this.mFileTreeCountTsmi = new System.Windows.Forms.ToolStripMenuItem();
             this.mMainToolStrip = new System.Windows.Forms.ToolStrip();
             this.mUpArrowBtn = new System.Windows.Forms.ToolStripButton();
             this.mAddressInput = new System.Windows.Forms.ToolStripComboBox();
@@ -79,7 +79,7 @@
             this.mMainMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFileTsmi,
             this.mViewTsmi,
-            this.mFileTreeCoundTsmi});
+            this.mFileTreeCountTsmi});
             this.mMainMenuStrip.Location = new System.Drawing.Point(0, 0);
             this.mMainMenuStrip.Name = "mMainMenuStrip";
             this.mMainMenuStrip.Padding = new System.Windows.Forms.Padding(7, 2, 0, 2);
@@ -142,12 +142,13 @@
             this.mHiddenFilesTsmi.Text = "Hidden files";
             this.mHiddenFilesTsmi.CheckStateChanged += new System.EventHandler(this.HiddenFilesTsmi_CheckStateChanged);
             // 
-            // mFileTreeCoundTsmi
+            // mFileTreeCountTsmi
             // 
-            this.mFileTreeCoundTsmi.Name = "mFileTreeCoundTsmi";
-            this.mFileTreeCoundTsmi.Size = new System.Drawing.Size(102, 21);
-            this.mFileTreeCoundTsmi.Text = "FileTree.Count";
-            this.mFileTreeCoundTsmi.Click += new System.EventHandler(this.FileTreeCountTsmi_Click);
+            this.mFileTreeCountTsmi.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.mFileTreeCountTsmi.Name = "mFileTreeCountTsmi";
+            this.mFileTreeCountTsmi.Size = new System.Drawing.Size(117, 21);
+            this.mFileTreeCountTsmi.Text = "FileTree.Count";
+            this.mFileTreeCountTsmi.Click += new System.EventHandler(this.FileTreeCountTsmi_Click);
             // 
             // mMainToolStrip
             // 
@@ -439,7 +440,7 @@
         private System.Windows.Forms.ToolStripMenuItem mHiddenFilesTsmi;
         private System.Windows.Forms.ToolStripMenuItem mNewFileContextMenu;
         private System.Windows.Forms.ToolStripMenuItem mRefreshContextMenu;
-        private System.Windows.Forms.ToolStripMenuItem mFileTreeCoundTsmi;
+        private System.Windows.Forms.ToolStripMenuItem mFileTreeCountTsmi;
         private System.Windows.Forms.ToolStripStatusLabel mFileEntryCountLabel;
     }
 }
