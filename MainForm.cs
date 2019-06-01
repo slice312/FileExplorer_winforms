@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Threading;
@@ -17,6 +18,8 @@ namespace FileExplorer
 {
     public partial class MainForm : Form
     {
+        //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
+
         //Текущий путь.
         private string mCurrentPath;
 
@@ -286,7 +289,7 @@ namespace FileExplorer
             DirectoryInfo directoryInfo = new DirectoryInfo(mCurrentPath);
 
             if (directoryInfo.Parent != null)
-                ShowFilesList(@"\\?\" + directoryInfo.Parent.FullName);
+                ShowFilesList(directoryInfo.Parent.FullName);
         }
 
 
@@ -395,7 +398,7 @@ namespace FileExplorer
         {
             Console.WriteLine("DirectoryTreeView_AfterSelect");
             mCurSelectedNode = e.Node;
-            ShowFilesList(@"\\?\" + e.Node.Tag.ToString());
+            ShowFilesList(e.Node.Tag.ToString());
         }
 
         private void DirectoryTreeView_BeforeExpand(object sender, TreeViewCancelEventArgs e)
@@ -469,8 +472,7 @@ namespace FileExplorer
                     driveNode.ImageKey = "drive";
                     driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
 
-                    //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
-                    TreeItem childNode = new TreeItem(@"\\?\" + info.Name, mFileTree);
+                    TreeItem childNode = new TreeItem(info.Name, mFileTree);
                     mFileTree.AddChild(childNode);
                     ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
                 }
@@ -526,14 +528,14 @@ namespace FileExplorer
         }
 
 
-        //TODO загрузка в дерево для поиска
+        //Загрузка в дерево для поиска.
         private void LoadFileTree(object _node)
         {
             TreeItem node = (TreeItem) _node;
 
             foreach (string entry in Directory.GetFileSystemEntries(node.ItemData))
             {
-                if (entry == @"\\?\C:\Windows") continue;
+                if (entry == @"C:\Windows") continue;
 
                 FileAttributes attr = File.GetAttributes(entry);
                 if (attr.HasFlag(FileAttributes.System)
@@ -566,7 +568,7 @@ namespace FileExplorer
         {
             Console.WriteLine("\t\t\t\t\t\tShowFilesList");
             //Обновить текущий путь и адресную строку.
-            mCurrentPath = path.Substring(4);
+            mCurrentPath = path;
             mAddressInput.Text = mCurrentPath;
 
             //BeginUpdate, EndUpdate - нужны при добавление большого количества элементов,
@@ -802,7 +804,7 @@ namespace FileExplorer
 
 //            foreach (var (path, isFile) in mTmpItemList)
 //            {
-//                AddItemOnListView(path.Substring(4), isFile);
+//                AddItemOnListView(path, isFile);
 //            }
 
 //            Console.WriteLine("Joined ThreadPool");
@@ -832,7 +834,7 @@ namespace FileExplorer
                     if (name.Contains(mSearchFileName))
                     {
 //                        mTmpItemList.Add((fullName, false));
-                        AddItemOnListViewAsync(fullName.Substring(4), false);
+                        AddItemOnListViewAsync(fullName, false);
                     }
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), childNode);
@@ -842,7 +844,7 @@ namespace FileExplorer
                 {
                     if (name.Contains(mSearchFileName))
                     {
-                        AddItemOnListViewAsync(fullName.Substring(4), true);
+                        AddItemOnListViewAsync(fullName, true);
 //                        mTmpItemList.Add((fullName, true));
                     }
                 }

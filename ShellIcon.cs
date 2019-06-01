@@ -71,15 +71,13 @@ namespace FileExplorer
 
         public static Icon GetSmallIcon(string fileName)
         {
-            string name = fileName.Substring(4);
-            return GetIcon(name, Win32.FILE_ATTRIBUTE_NORMAL, Win32.SHGFI_SMALLICON);
+            return GetIcon(fileName, Win32.FILE_ATTRIBUTE_NORMAL, Win32.SHGFI_SMALLICON);
         }
 
 
         public static Icon GetLargeIcon(string fileName)
         {
-            string name = fileName.Substring(4);
-            return GetIcon(name, Win32.FILE_ATTRIBUTE_NORMAL, Win32.SHGFI_LARGEICON);
+            return GetIcon(fileName, Win32.FILE_ATTRIBUTE_NORMAL, Win32.SHGFI_LARGEICON);
         }
 
 
