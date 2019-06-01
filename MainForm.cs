@@ -41,12 +41,15 @@ namespace FileExplorer
         //Дерево со всеми файловыми записями.
         private TreeItem mFileTree;
 
+        private TreeItem mTreeCurrentNode;
+
 
         public MainForm()
         {
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
-//            mTmpItemList = new ConcurrentBag<(string, bool)>();
+            //            mTmpItemList = new ConcurrentBag<(string, bool)>();
+            mTreeCurrentNode = mFileTree;
             mIsMove = false;
             mShowHidden = false;
             mCurSelectedNode = null;
@@ -207,7 +210,6 @@ namespace FileExplorer
         {
             Console.WriteLine("Refresh_Click");
             ShowFilesList(mCurrentPath);
-            GetFileTreeNodeByCurrentPath();
         }
 
 
@@ -284,7 +286,7 @@ namespace FileExplorer
             DirectoryInfo directoryInfo = new DirectoryInfo(mCurrentPath);
 
             if (directoryInfo.Parent != null)
-                ShowFilesList(directoryInfo.Parent.FullName);
+                ShowFilesList(@"\\?\" + directoryInfo.Parent.FullName);
         }
 
 
@@ -393,7 +395,7 @@ namespace FileExplorer
         {
             Console.WriteLine("DirectoryTreeView_AfterSelect");
             mCurSelectedNode = e.Node;
-            ShowFilesList(e.Node.Tag.ToString());
+            ShowFilesList(@"\\?\" + e.Node.Tag.ToString());
         }
 
         private void DirectoryTreeView_BeforeExpand(object sender, TreeViewCancelEventArgs e)
@@ -559,10 +561,14 @@ namespace FileExplorer
         }
 
 
-        //Загрузить список файлов на ListView
-        public void ShowFilesList(string path)
+        //Загрузить список файлов на ListView.
+        private void ShowFilesList(string path)
         {
             Console.WriteLine("\t\t\t\t\t\tShowFilesList");
+            //Обновить текущий путь и адресную строку.
+            mCurrentPath = path.Substring(4);
+            mAddressInput.Text = mCurrentPath;
+
             //BeginUpdate, EndUpdate - нужны при добавление большого количества элементов,
             //чтобы не перерисовывало после каждого.
             mListViewFiles.BeginUpdate();
@@ -570,36 +576,34 @@ namespace FileExplorer
 
             try
             {
-                DirectoryInfo directoryInfo = new DirectoryInfo(path);
+                TreeItem node = GetFileTreeNodeByPath(mCurrentPath);
 
-                //Cписок папок.
-                foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
+                foreach (TreeItem childNode in node.Childs)
                 {
-//                    DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
-//                    if (security.AreAccessRulesProtected)
-//                        continue;
+                    string fullName = childNode.ItemData;
+                    FileAttributes attr = File.GetAttributes(fullName);
 
-                    var attr = File.GetAttributes(dir.FullName);
-                    if (attr.HasFlag(FileAttributes.System)
-                        || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
+                    string name = fullName.Split('\\').Last();
+
+                    if (attr.HasFlag(FileAttributes.Directory))
                     {
-                        continue;
+                        AddItemOnListView(fullName, false);
                     }
-
-                    AddItemOnListView(dir.FullName, false);
                 }
 
-                //Cписок файлов.
-                foreach (FileInfo file in directoryInfo.GetFiles())
-                {
-                    var attr = File.GetAttributes(file.FullName);
-                    if (attr.HasFlag(FileAttributes.System)
-                        || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                    {
-                        continue;
-                    }
 
-                    AddItemOnListView(file.FullName, true);
+                foreach (TreeItem childNode in node.Childs)
+                {
+                    string fullName = childNode.ItemData;
+                    FileAttributes attr = File.GetAttributes(fullName);
+
+                    string name = fullName.Split('\\').Last();
+
+
+                    if (!attr.HasFlag(FileAttributes.Directory))
+                    {
+                        AddItemOnListView(fullName, true);
+                    }
                 }
             }
             catch (Exception ex)
@@ -608,13 +612,11 @@ namespace FileExplorer
                 Console.WriteLine(ex.StackTrace);
             }
 
-            //Обновить текущий путь и адресную строку.
-            mCurrentPath = path;
-            mAddressInput.Text = mCurrentPath;
             //Количество файлов\папок в статус бар.
             mStatusBarFileNum.Text = mListViewFiles.Items.Count + " items";
             mListViewFiles.EndUpdate();
         }
+
 
         private void AddItemOnListView(string fullPath, bool isFile)
         {
@@ -690,6 +692,7 @@ namespace FileExplorer
                     if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
                     {
                         //Открыть папку.
+                        mCurrentPath = path;
                         ShowFilesList(path);
                     }
                     else
@@ -791,7 +794,7 @@ namespace FileExplorer
         {
 //            mListViewFiles.BeginUpdate();
 
-            TreeItem node = GetFileTreeNodeByCurrentPath();
+            TreeItem node = GetFileTreeNodeByPath(mCurrentPath);
 
             ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
 
@@ -847,9 +850,10 @@ namespace FileExplorer
         }
 
 
-        private TreeItem GetFileTreeNodeByCurrentPath()
+        //path без спец. символов.
+        private TreeItem GetFileTreeNodeByPath(string path)
         {
-            string[] parts = mCurrentPath.Split('\\');
+            string[] parts = path.Split('\\');
 
             TreeItem currentNode = null;
 
