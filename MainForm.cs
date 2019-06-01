@@ -33,8 +33,7 @@ namespace FileExplorer
         private readonly List<string> mListSourcesPath;
 
         //Хранит записи при поиске, чтобы сразу не помещать на ListView.
-        private ConcurrentBag<(string, bool)> mTmpItemList;
-//        private LinkedList<(string, bool)> mTmpItemList;
+//        private ConcurrentBag<(string, bool)> mTmpItemList;
 
         //Имя файла для поиска.
         private string mSearchFileName;
@@ -47,7 +46,7 @@ namespace FileExplorer
         {
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
-            mTmpItemList = new ConcurrentBag<(string, bool)>();
+//            mTmpItemList = new ConcurrentBag<(string, bool)>();
             mIsMove = false;
             mShowHidden = false;
             mCurSelectedNode = null;
@@ -415,6 +414,13 @@ namespace FileExplorer
         {
             Console.WriteLine("SearchInput_Leave");
             mSearchInput.Text = "Search:";
+
+            if (mListViewFiles.Items.Count == 0)
+            {
+                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
+            }
+
+            mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
         }
 
         private void SearchInput_KeyDown(object sender, KeyEventArgs e)
@@ -427,10 +433,10 @@ namespace FileExplorer
                 if (string.IsNullOrEmpty(fileName))
                     return;
 
-                while (!mTmpItemList.IsEmpty)
-                {
-                    mTmpItemList.TryTake(out var someItem);
-                }
+//                while (!mTmpItemList.IsEmpty)
+//                {
+//                    mTmpItemList.TryTake(out var someItem);
+//                }
 
                 mListViewFiles.Items.Clear();
                 mStatusBarFileNum.Text = "0 items";
@@ -452,10 +458,8 @@ namespace FileExplorer
                 mListIcons.Images.Add("drive", driveIcon);
 
                 mFileTree = new TreeItem("ROOT", null);
-                int n = 0;
                 foreach (DriveInfo info in DriveInfo.GetDrives())
                 {
-                    if (n++ > 1) break;
                     string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
                     label += $"({info.Name.Split('\\')[0]})";
                     TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
@@ -607,7 +611,7 @@ namespace FileExplorer
             //Обновить текущий путь и адресную строку.
             mCurrentPath = path;
             mAddressInput.Text = mCurrentPath;
-            //Количество файлов\папок в статус бар.  //TODO добавить событие selected items
+            //Количество файлов\папок в статус бар.
             mStatusBarFileNum.Text = mListViewFiles.Items.Count + " items";
             mListViewFiles.EndUpdate();
         }
@@ -615,49 +619,104 @@ namespace FileExplorer
 
         private void AddItemOnListView(string fullPath, bool isFile)
         {
-            if (isFile)
+            if (mListViewFiles.InvokeRequired)
             {
-                FileInfo fileInfo = new FileInfo(fullPath);
-
-                ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
-
-                //Исполняемые файлы и ярлыки могут иметь разные иконки.
-                if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
-                    fileInfo.Extension == string.Empty)
+                mListViewFiles.Invoke(new MethodInvoker(delegate
                 {
-                    if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
+                    if (isFile)
                     {
-                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                        mListIcons.Images.Add(fileInfo.FullName, fileIcon);
-                    }
+                        FileInfo fileInfo = new FileInfo(fullPath);
 
-                    item.ImageKey = fileInfo.FullName;
-                }
-                else
-                {
-                    //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
-                    if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
+                        ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
+
+
+                        //Исполняемые файлы и ярлыки могут иметь разные иконки.
+                        if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
+                            fileInfo.Extension == string.Empty)
+                        {
+                            if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
+                            {
+                                Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                                mListIcons.Images.Add(fileInfo.FullName, fileIcon);
+                            }
+
+                            item.ImageKey = fileInfo.FullName;
+                        }
+                        else
+                        {
+                            //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
+                            if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
+                            {
+                                Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                                mListIcons.Images.Add(fileInfo.Extension, fileIcon);
+                            }
+
+                            item.ImageKey = fileInfo.Extension;
+                        }
+
+                        item.Tag = fileInfo.FullName;
+                        item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                        item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
+                        item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
+                    }
+                    else
                     {
-                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
-                        mListIcons.Images.Add(fileInfo.Extension, fileIcon);
+                        DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
+                        ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
+                        item.Tag = dirInfo.FullName;
+                        item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                        item.SubItems.Add("Folder");
+                        item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
                     }
-
-                    item.ImageKey = fileInfo.Extension;
-                }
-
-                item.Tag = fileInfo.FullName;
-                item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
-                item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
+                }));
             }
             else
             {
-                DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
-                ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
-                item.Tag = dirInfo.FullName;
-                item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
-                item.SubItems.Add("Folder");
-                item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
+                if (isFile)
+                {
+                    FileInfo fileInfo = new FileInfo(fullPath);
+
+                    ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
+
+
+                    //Исполняемые файлы и ярлыки могут иметь разные иконки.
+                    if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
+                        fileInfo.Extension == string.Empty)
+                    {
+                        if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
+                        {
+                            Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                            mListIcons.Images.Add(fileInfo.FullName, fileIcon);
+                        }
+
+                        item.ImageKey = fileInfo.FullName;
+                    }
+                    else
+                    {
+                        //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
+                        if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
+                        {
+                            Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                            mListIcons.Images.Add(fileInfo.Extension, fileIcon);
+                        }
+
+                        item.ImageKey = fileInfo.Extension;
+                    }
+
+                    item.Tag = fileInfo.FullName;
+                    item.SubItems.Add(fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                    item.SubItems.Add(string.IsNullOrEmpty(fileInfo.Extension) ? "File" : fileInfo.Extension);
+                    item.SubItems.Add(FileSystem.FileSizeStr(fileInfo.Length));
+                }
+                else
+                {
+                    DirectoryInfo dirInfo = new DirectoryInfo(fullPath);
+                    ListViewItem item = mListViewFiles.Items.Add(dirInfo.Name, "folder");
+                    item.Tag = dirInfo.FullName;
+                    item.SubItems.Add(dirInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm"));
+                    item.SubItems.Add("Folder");
+                    item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
+                }
             }
         }
 
@@ -771,7 +830,33 @@ namespace FileExplorer
         }
 
 
-        private async Task SearchInTree(object _node)
+        private void Search()
+        {
+//            mListViewFiles.BeginUpdate();
+
+            TreeItem node = GetFileTreeNodeByCurrentPath();
+
+            ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
+
+            //            SearchInTree(node);
+
+//            foreach (var (path, isFile) in mTmpItemList)
+//            {
+//                AddItemOnListView(path.Substring(4), isFile);
+//            }
+
+//            Console.WriteLine("Joined ThreadPool");
+//            if (mTmpItemList.IsEmpty)
+//            {
+//                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
+//            }
+
+//            mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
+//            mListViewFiles.EndUpdate();
+        }
+
+
+        private void SearchInTree(object _node)
         {
             TreeItem node = (TreeItem) _node;
             foreach (TreeItem childNode in node.Childs)
@@ -786,21 +871,19 @@ namespace FileExplorer
                 {
                     if (name.Contains(mSearchFileName))
                     {
-//                        AddItemOnListView(fullName.Substring(4), false);
-                        mTmpItemList.Add((fullName, false));
+//                        mTmpItemList.Add((fullName, false));
+                        AddItemOnListView(fullName.Substring(4), false);
                     }
 
-//                    ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), child);
-                    await SearchInTree(childNode);
-//                    var t1 = Task.Factory.StartNew(
-//                        () => SearchInTree(new TreeNode(nextLevel)));
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), childNode);
+//                    SearchInTree(childNode);
                 }
                 else
                 {
                     if (name.Contains(mSearchFileName))
                     {
-//                        AddItemOnListView(fullName.Substring(4), true);
-                        mTmpItemList.Add((fullName, true));
+                        AddItemOnListView(fullName.Substring(4), true);
+//                        mTmpItemList.Add((fullName, true));
                     }
                 }
             }
@@ -842,34 +925,6 @@ namespace FileExplorer
 
             NextNode(mFileTree, 0);
             return currentNode;
-        }
-
-
-        private async Task Search()
-        {
-            mListViewFiles.BeginUpdate();
-
-            TreeItem node = GetFileTreeNodeByCurrentPath();
-
-
-//            ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
-
-//            SearchInTree(node);
-            await SearchInTree(node);
-
-            foreach ((string path, bool isFile) tuple in mTmpItemList)
-            {
-                AddItemOnListView(tuple.path.Substring(4), tuple.isFile);
-            }
-
-            Console.WriteLine("Joined ThreadPool");
-            if (mTmpItemList.IsEmpty)
-            {
-                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
-            }
-
-            mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-            mListViewFiles.EndUpdate();
         }
     }
 }

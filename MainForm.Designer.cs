@@ -75,7 +75,7 @@
             // 
             // mMainMenuStrip
             // 
-            this.mMainMenuStrip.Font = new System.Drawing.Font("Microsoft YaHei", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.mMainMenuStrip.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.mMainMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFileTsmi,
             this.mViewTsmi,
@@ -83,7 +83,7 @@
             this.mMainMenuStrip.Location = new System.Drawing.Point(0, 0);
             this.mMainMenuStrip.Name = "mMainMenuStrip";
             this.mMainMenuStrip.Padding = new System.Windows.Forms.Padding(7, 2, 0, 2);
-            this.mMainMenuStrip.Size = new System.Drawing.Size(984, 25);
+            this.mMainMenuStrip.Size = new System.Drawing.Size(984, 24);
             this.mMainMenuStrip.TabIndex = 0;
             this.mMainMenuStrip.Text = "menuStrip1";
             // 
@@ -94,27 +94,27 @@
             this.mNewFileMain,
             this.mPasteMain});
             this.mFileTsmi.Name = "mFileTsmi";
-            this.mFileTsmi.Size = new System.Drawing.Size(39, 21);
+            this.mFileTsmi.Size = new System.Drawing.Size(47, 20);
             this.mFileTsmi.Text = "File";
             // 
             // mNewFolderMain
             // 
             this.mNewFolderMain.Name = "mNewFolderMain";
-            this.mNewFolderMain.Size = new System.Drawing.Size(141, 22);
+            this.mNewFolderMain.Size = new System.Drawing.Size(144, 22);
             this.mNewFolderMain.Text = "New folder";
             this.mNewFolderMain.Click += new System.EventHandler(this.NewFolder_Click);
             // 
             // mNewFileMain
             // 
             this.mNewFileMain.Name = "mNewFileMain";
-            this.mNewFileMain.Size = new System.Drawing.Size(141, 22);
+            this.mNewFileMain.Size = new System.Drawing.Size(144, 22);
             this.mNewFileMain.Text = "New file";
             this.mNewFileMain.Click += new System.EventHandler(this.NewFile_Click);
             // 
             // mPasteMain
             // 
             this.mPasteMain.Name = "mPasteMain";
-            this.mPasteMain.Size = new System.Drawing.Size(141, 22);
+            this.mPasteMain.Size = new System.Drawing.Size(144, 22);
             this.mPasteMain.Text = "Paste";
             this.mPasteMain.Click += new System.EventHandler(this.Paste_Click);
             // 
@@ -124,13 +124,13 @@
             this.mRefreshMain,
             this.mHiddenFilesTsmi});
             this.mViewTsmi.Name = "mViewTsmi";
-            this.mViewTsmi.Size = new System.Drawing.Size(47, 21);
+            this.mViewTsmi.Size = new System.Drawing.Size(47, 20);
             this.mViewTsmi.Text = "View";
             // 
             // mRefreshMain
             // 
             this.mRefreshMain.Name = "mRefreshMain";
-            this.mRefreshMain.Size = new System.Drawing.Size(145, 22);
+            this.mRefreshMain.Size = new System.Drawing.Size(158, 22);
             this.mRefreshMain.Text = "Refresh";
             this.mRefreshMain.Click += new System.EventHandler(this.Refresh_Click);
             // 
@@ -138,7 +138,7 @@
             // 
             this.mHiddenFilesTsmi.CheckOnClick = true;
             this.mHiddenFilesTsmi.Name = "mHiddenFilesTsmi";
-            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(145, 22);
+            this.mHiddenFilesTsmi.Size = new System.Drawing.Size(158, 22);
             this.mHiddenFilesTsmi.Text = "Hidden files";
             this.mHiddenFilesTsmi.CheckStateChanged += new System.EventHandler(this.HiddenFilesTsmi_CheckStateChanged);
             // 
@@ -146,7 +146,7 @@
             // 
             this.mFileTreeCountTsmi.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.mFileTreeCountTsmi.Name = "mFileTreeCountTsmi";
-            this.mFileTreeCountTsmi.Size = new System.Drawing.Size(117, 21);
+            this.mFileTreeCountTsmi.Size = new System.Drawing.Size(117, 20);
             this.mFileTreeCountTsmi.Text = "FileTree.Count";
             this.mFileTreeCountTsmi.Click += new System.EventHandler(this.FileTreeCountTsmi_Click);
             // 
@@ -157,7 +157,7 @@
             this.mUpArrowBtn,
             this.mAddressInput,
             this.mSearchInput});
-            this.mMainToolStrip.Location = new System.Drawing.Point(0, 25);
+            this.mMainToolStrip.Location = new System.Drawing.Point(0, 24);
             this.mMainToolStrip.Name = "mMainToolStrip";
             this.mMainToolStrip.Size = new System.Drawing.Size(984, 25);
             this.mMainToolStrip.TabIndex = 1;
@@ -187,6 +187,7 @@
             // mSearchInput
             // 
             this.mSearchInput.BackColor = System.Drawing.SystemColors.ControlLight;
+            this.mSearchInput.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.mSearchInput.Name = "mSearchInput";
             this.mSearchInput.Size = new System.Drawing.Size(160, 25);
             this.mSearchInput.Text = "Search...";
@@ -304,7 +305,7 @@
             // splitContainer
             // 
             this.splitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer.Location = new System.Drawing.Point(0, 50);
+            this.splitContainer.Location = new System.Drawing.Point(0, 49);
             this.splitContainer.Name = "splitContainer";
             // 
             // splitContainer.Panel1
@@ -314,7 +315,7 @@
             // splitContainer.Panel2
             // 
             this.splitContainer.Panel2.Controls.Add(this.mListViewFiles);
-            this.splitContainer.Size = new System.Drawing.Size(984, 449);
+            this.splitContainer.Size = new System.Drawing.Size(984, 450);
             this.splitContainer.SplitterDistance = 327;
             this.splitContainer.SplitterWidth = 5;
             this.splitContainer.TabIndex = 3;
@@ -328,7 +329,7 @@
             this.mDirectoryTreeView.Location = new System.Drawing.Point(0, 0);
             this.mDirectoryTreeView.Name = "mDirectoryTreeView";
             this.mDirectoryTreeView.SelectedImageIndex = 0;
-            this.mDirectoryTreeView.Size = new System.Drawing.Size(327, 449);
+            this.mDirectoryTreeView.Size = new System.Drawing.Size(327, 450);
             this.mDirectoryTreeView.TabIndex = 0;
             this.mDirectoryTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.DirectoryTreeView_BeforeExpand);
             this.mDirectoryTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DirectoryTreeView_AfterSelect);
@@ -343,12 +344,12 @@
             this.mSizeColHeader});
             this.mListViewFiles.ContextMenuStrip = this.mMainContextMenuStrip;
             this.mListViewFiles.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.mListViewFiles.Font = new System.Drawing.Font("Microsoft YaHei", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.mListViewFiles.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.mListViewFiles.FullRowSelect = true;
             this.mListViewFiles.LabelEdit = true;
             this.mListViewFiles.Location = new System.Drawing.Point(0, 0);
             this.mListViewFiles.Name = "mListViewFiles";
-            this.mListViewFiles.Size = new System.Drawing.Size(652, 449);
+            this.mListViewFiles.Size = new System.Drawing.Size(652, 450);
             this.mListViewFiles.SmallImageList = this.mListIcons;
             this.mListViewFiles.TabIndex = 0;
             this.mListViewFiles.UseCompatibleStateImageBehavior = false;
