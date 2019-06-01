@@ -867,7 +867,7 @@ namespace FileExplorer
                 {
                     if (step == 0)
                     {
-                        string name = childNode.ItemData.Split('\\')[3];
+                        string name = childNode.ItemData.Split('\\')[0];
                         if (name == parts[step])
                         {
                             currentNode = childNode;
