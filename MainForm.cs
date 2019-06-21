@@ -19,6 +19,7 @@ namespace FileExplorer
     public partial class MainForm : Form
     {
         //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
+        private const string PREFIX = @"\\?\";
 
         //Текущий путь.
         private string mCurrentPath;
@@ -35,8 +36,6 @@ namespace FileExplorer
         //Исходный путь к файлам для копирования и вставки.
         private readonly List<string> mListSourcesPath;
 
-        //Хранит записи при поиске, чтобы сразу не помещать на ListView.
-//        private ConcurrentBag<(string, bool)> mTmpItemList;
 
         //Имя файла для поиска.
         private string mSearchFileName;
@@ -47,8 +46,11 @@ namespace FileExplorer
         private TreeItem mTreeCurrentNode;
 
 
+
+
         public MainForm()
         {
+            ThreadPool.SetMaxThreads(25, 25);
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
             //            mTmpItemList = new ConcurrentBag<(string, bool)>();
@@ -156,7 +158,7 @@ namespace FileExplorer
 
             LoadChildNodes(mCurSelectedNode);
             mTreeCurrentNode.Childs.Clear();
-            LoadFileTree(mTreeCurrentNode);
+            FileSystem.LoadFileTree(mTreeCurrentNode);
             ShowFilesList(mCurrentPath);
         }
 
@@ -394,7 +396,7 @@ namespace FileExplorer
 
             LoadChildNodes(mCurSelectedNode);
             mTreeCurrentNode.Childs.Clear();
-            LoadFileTree(mTreeCurrentNode);
+            FileSystem.LoadFileTree(mTreeCurrentNode);
             ShowFilesList(mCurrentPath);
         }
 
@@ -481,35 +483,32 @@ namespace FileExplorer
             Console.WriteLine("InitDisplay");
             try
             {
-                ThreadPool.SetMaxThreads(25, 25);
-
-                Icon driveIcon = ShellIcon.GetDriveIcon();
-                mListIcons.Images.Add("drive", driveIcon);
-
                 mFileTree = new TreeItem("ROOT", null);
+                mListIcons.Images.Add("drive", ShellIcon.DriveIcon);    //для всех дисков и папок 
+                mListIcons.Images.Add("folder", ShellIcon.FolderIcon);  //одинаковая иконка
+
                 foreach (DriveInfo info in DriveInfo.GetDrives())
                 {
-                    string label = (info.VolumeLabel == string.Empty) ? "Disk" : info.VolumeLabel;
+                    string label = string.IsNullOrWhiteSpace(info.VolumeLabel) ? "Disk" : info.VolumeLabel;
                     label += $"({info.Name.Split('\\')[0]})";
+
                     TreeNode driveNode = mDirectoryTreeView.Nodes.Add(label);
                     driveNode.Tag = info.Name;
                     driveNode.ImageKey = "drive";
                     driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
 
-                    TreeItem childNode = new TreeItem(info.Name, mFileTree);
+                    TreeItem childNode = new TreeItem(PREFIX + info.Name, mFileTree);
                     mFileTree.AddChild(childNode);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(FileSystem.LoadFileTree), childNode);
                 }
+
+                mFileTree = mFileTree.Childs.First();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Console.WriteLine(ex.StackTrace);
             }
-
-            //Для всех папок одинаковая иконка.
-            Icon folderIcon = ShellIcon.GetFolderIcon();
-            mListIcons.Images.Add("folder", folderIcon);
         }
 
 
@@ -552,39 +551,7 @@ namespace FileExplorer
         }
 
 
-        //Загрузка в дерево для поиска.
-        private void LoadFileTree(object _node)
-        {
-            TreeItem node = (TreeItem) _node;
-
-            foreach (string entry in Directory.GetFileSystemEntries(node.ItemData))
-            {
-                if (entry == @"C:\Windows") continue;
-
-                FileAttributes attr = File.GetAttributes(entry);
-                if (attr.HasFlag(FileAttributes.System)
-                    || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
-                {
-                    continue;
-                }
-
-                TreeItem childNode;
-
-                if (attr.HasFlag(FileAttributes.Directory))
-                {
-//                    DirectorySecurity security = Directory.GetAccessControl(entry);
-//                        if (security.AreAccessRulesProtected) continue;
-                    childNode = new TreeItem(entry, node);
-                    node.AddChild(childNode);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
-                }
-                else
-                {
-                    childNode = new TreeItem(entry, node);
-                    node.AddChild(childNode);
-                }
-            }
-        }
+    
 
 
         //Загрузить список файлов на ListView.
@@ -602,7 +569,7 @@ namespace FileExplorer
 
             try
             {
-                TreeItem node = GetFileTreeNodeByPath(mCurrentPath);
+                TreeItem node = FileSystem.GetFileTreeNodeByPath(PREFIX + mCurrentPath, mFileTree);
 
                 foreach (TreeItem childNode in node.Childs)
                 {
@@ -828,7 +795,7 @@ namespace FileExplorer
         {
 //            mListViewFiles.BeginUpdate();
 
-            TreeItem node = GetFileTreeNodeByPath(mCurrentPath);
+            TreeItem node = FileSystem.GetFileTreeNodeByPath(PREFIX + mCurrentPath, mFileTree);
 
             ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
 
@@ -881,45 +848,6 @@ namespace FileExplorer
                     }
                 }
             }
-        }
-
-
-        //path без спец. символов.
-        private TreeItem GetFileTreeNodeByPath(string path)
-        {
-            string[] parts = path.Split('\\');
-
-            TreeItem currentNode = null;
-
-            void NextNode(TreeItem _node, int step)
-            {
-                if (step >= parts.Length) return;
-
-                foreach (TreeItem childNode in _node.Childs)
-                {
-                    if (step == 0)
-                    {
-                        string name = childNode.ItemData.Split('\\')[0];
-                        if (name == parts[step])
-                        {
-                            currentNode = childNode;
-                            NextNode(childNode, step + 1);
-                        }
-                    }
-                    else
-                    {
-                        string name = childNode.ItemData.Split('\\').Last();
-                        if (name == parts[step])
-                        {
-                            currentNode = childNode;
-                            NextNode(childNode, step + 1);
-                        }
-                    }
-                }
-            }
-
-            NextNode(mFileTree, 0);
-            return currentNode;
         }
     }
 }
