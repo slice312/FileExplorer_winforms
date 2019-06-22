@@ -1,12 +1,105 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
+using System.Text;
+using System.Threading;
 
 
 namespace FileExplorer
 {
     public static class FileSystem
     {
+        //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
+        public const string LONG_PATH_PREFIX = @"\\?\";
+
+
+        public static string AddLongPathPrefix(this string path)
+        {
+            return LONG_PATH_PREFIX + path;
+        }
+
+
+        public static string WithoutLongPathPrefix(this string path)
+        {
+            return path.Replace(LONG_PATH_PREFIX, "");
+        }
+
+
+        //Загрузка в дерево для поиска.
+        public static void LoadFileTreeAsync(object _node)
+        {
+            TreeItem node = (TreeItem) _node;
+
+            foreach (string entry in Directory.EnumerateFileSystemEntries(node.ItemData))
+            {
+                FileAttributes attr = File.GetAttributes(entry);
+                if (attr.HasFlag(FileAttributes.System))
+                    continue;
+
+                try
+                {
+                    Directory.GetAccessControl(entry);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    continue;
+                }
+
+
+                TreeItem childNode;
+
+                if (attr.HasFlag(FileAttributes.Directory))
+                {
+                    childNode = new TreeItem(entry, node);
+                    node.AddChild(childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTreeAsync), childNode);
+                }
+                else
+                {
+                    childNode = new TreeItem(entry, node);
+                    node.AddChild(childNode);
+                }
+            }
+        }
+
+
+        public static TreeItem GetFileTreeNodeByPath(string path, TreeItem fileTree)
+        {
+            if (path == fileTree.ItemData)
+                return fileTree;
+
+            string[] tokens = path
+                .WithoutLongPathPrefix()
+                .Split(new char[] {'\\'}, StringSplitOptions.RemoveEmptyEntries);
+
+            TreeItem currentNode = null;
+
+            void nextNode(TreeItem node, int step)
+            {
+                if (step >= tokens.Length) return;
+
+                foreach (TreeItem childNode in node.Childs)
+                {
+                    string name = childNode.ItemData.WithoutLongPathPrefix()
+                        .Split(new char[] {'\\'}, StringSplitOptions.RemoveEmptyEntries)
+                        .Last();
+                    if (name == tokens[step])
+                    {
+                        currentNode = childNode;
+                        nextNode(childNode, step + 1);
+                    }
+                }
+            }
+
+            nextNode(fileTree, 0);
+            return currentNode;
+        }
+
+
         public static void CopyAndPasteDirectory(DirectoryInfo sourceDir, DirectoryInfo destDir)
         {
             //Является ли целевая папка подкаталогом исходной папки.
@@ -46,7 +139,8 @@ namespace FileExplorer
             else if (fileSize >= 1024 * 1024 && fileSize < 1024 * 1024 * 1024)
                 fileSizeStr = Math.Round(fileSize * 1.0 / (1024 * 1024), 2, MidpointRounding.AwayFromZero) + " MB";
             else if (fileSize >= 1024 * 1024 * 1024)
-                fileSizeStr = Math.Round(fileSize * 1.0 / (1024 * 1024 * 1024), 2, MidpointRounding.AwayFromZero) + " GB";
+                fileSizeStr = Math.Round(fileSize * 1.0 / (1024 * 1024 * 1024), 2, MidpointRounding.AwayFromZero) +
+                              " GB";
 
             return fileSizeStr;
         }
@@ -71,24 +165,21 @@ namespace FileExplorer
             {
                 size += directoryInfos.Sum(dirInfo => GetDirectorySize(dirInfo.FullName));
             }
+
             return size;
         }
 
 
         public static bool IsValidFileName(string fileName)
         {
-            bool isValid = true;
             const string errChar = "\\/:*?\"<>|";
 
-            foreach (var ch in errChar)
+            foreach (char ch in errChar)
             {
                 if (fileName.Contains(ch.ToString()))
-                {
-                    isValid = false;
-                    break;
-                }
+                    return false;
             }
-            return isValid;
+            return true;
         }
     }
 }

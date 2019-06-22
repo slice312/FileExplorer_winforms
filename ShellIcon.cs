@@ -20,6 +20,7 @@ namespace FileExplorer
     /// </summary>
     public static class ShellIcon
     {
+
         [StructLayout(LayoutKind.Sequential)]
         public struct SHFILEINFO
         {
@@ -56,16 +57,20 @@ namespace FileExplorer
         }
 
 
-        private static Icon GetIcon(string fileName, uint dwAttributes, uint flags)
-        {
-            SHFILEINFO shinfo = new SHFILEINFO();
-            IntPtr hImgSmall = Win32.SHGetFileInfo(fileName, dwAttributes,
-                ref shinfo, (uint)Marshal.SizeOf(shinfo),
-                Win32.SHGFI_ICON | flags);
 
-            Icon icon = (Icon)System.Drawing.Icon.FromHandle(shinfo.hIcon).Clone();
-            Win32.DestroyIcon(shinfo.hIcon);
-            return icon;
+        
+        public static Icon DriveIcon { get; }
+        public static Icon FolderIcon { get; }
+
+
+        static ShellIcon()
+        {
+            uint flags = Win32.SHGFI_USEFILEATTRIBUTES;
+            flags += Win32.SHGFI_LARGEICON;
+            DriveIcon = GetIcon(null, Win32.FILE_ATTRIBUTE_DIRECTORY, flags);
+
+            flags = Win32.SHGFI_LARGEICON;
+            FolderIcon =  GetIcon(null, Win32.FILE_ATTRIBUTE_DIRECTORY, flags);
         }
 
 
@@ -81,17 +86,16 @@ namespace FileExplorer
         }
 
 
-        public static Icon GetDriveIcon()
+        private static Icon GetIcon(string fileName, uint dwAttributes, uint flags)
         {
-            uint flags = Win32.SHGFI_USEFILEATTRIBUTES;
-            flags += Win32.SHGFI_LARGEICON;
-            return GetIcon(null, Win32.FILE_ATTRIBUTE_DIRECTORY, flags);
-        }
+            SHFILEINFO shinfo = new SHFILEINFO();
+            IntPtr hImgSmall = Win32.SHGetFileInfo(fileName, dwAttributes,
+                ref shinfo, (uint)Marshal.SizeOf(shinfo),
+                Win32.SHGFI_ICON | flags);
 
-        public static Icon GetFolderIcon()
-        {
-            uint flags = Win32.SHGFI_LARGEICON;
-            return GetIcon(null, Win32.FILE_ATTRIBUTE_DIRECTORY, flags);
+            Icon icon = (Icon)System.Drawing.Icon.FromHandle(shinfo.hIcon).Clone();
+            Win32.DestroyIcon(shinfo.hIcon);
+            return icon;
         }
     }
 }
