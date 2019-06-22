@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
+using System.Text;
 using System.Threading;
 
 
@@ -11,8 +13,24 @@ namespace FileExplorer
 {
     public static class FileSystem
     {
+        //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
+        public const string LONG_PATH_PREFIX = @"\\?\";
+
+
+        public static string AddLongPathPrefix(this string path)
+        {
+            return LONG_PATH_PREFIX + path;
+        }
+
+
+        public static string WithoutLongPathPrefix(this string path)
+        {
+            return path.Replace(LONG_PATH_PREFIX, "");
+        }
+
+
         //Загрузка в дерево для поиска.
-        public static void LoadFileTree(object _node)
+        public static void LoadFileTreeAsync(object _node)
         {
             TreeItem node = (TreeItem) _node;
 
@@ -38,7 +56,7 @@ namespace FileExplorer
                 {
                     childNode = new TreeItem(entry, node);
                     node.AddChild(childNode);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTree), childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(LoadFileTreeAsync), childNode);
                 }
                 else
                 {
@@ -49,44 +67,37 @@ namespace FileExplorer
         }
 
 
-        //path без спец. символов. //TODO нужно сделать без этого метода
         public static TreeItem GetFileTreeNodeByPath(string path, TreeItem fileTree)
         {
-            string[] parts = path.Split('\\');
+            if (path == fileTree.ItemData)
+                return fileTree;
+
+            string[] tokens = path
+                .WithoutLongPathPrefix()
+                .Split(new char[] {'\\'}, StringSplitOptions.RemoveEmptyEntries);
 
             TreeItem currentNode = null;
 
-            void NextNode(TreeItem node, int step)
+            void nextNode(TreeItem node, int step)
             {
-                if (step >= parts.Length) return;
+                if (step >= tokens.Length) return;
 
                 foreach (TreeItem childNode in node.Childs)
                 {
-                    if (step == 0)
+                    string name = childNode.ItemData.WithoutLongPathPrefix()
+                        .Split(new char[] {'\\'}, StringSplitOptions.RemoveEmptyEntries)
+                        .Last();
+                    if (name == tokens[step])
                     {
-                        string name = childNode.ItemData.Split('\\')[0];
-                        if (name == parts[step])
-                        {
-                            currentNode = childNode;
-                            NextNode(childNode, step + 1);
-                        }
-                    }
-                    else
-                    {
-                        string name = childNode.ItemData.Split('\\').Last();
-                        if (name == parts[step])
-                        {
-                            currentNode = childNode;
-                            NextNode(childNode, step + 1);
-                        }
+                        currentNode = childNode;
+                        nextNode(childNode, step + 1);
                     }
                 }
             }
 
-            NextNode(fileTree, 0);
+            nextNode(fileTree, 0);
             return currentNode;
         }
-
 
 
         public static void CopyAndPasteDirectory(DirectoryInfo sourceDir, DirectoryInfo destDir)
@@ -161,19 +172,14 @@ namespace FileExplorer
 
         public static bool IsValidFileName(string fileName)
         {
-            bool isValid = true;
             const string errChar = "\\/:*?\"<>|";
 
-            foreach (var ch in errChar)
+            foreach (char ch in errChar)
             {
                 if (fileName.Contains(ch.ToString()))
-                {
-                    isValid = false;
-                    break;
-                }
+                    return false;
             }
-
-            return isValid;
+            return true;
         }
     }
 }

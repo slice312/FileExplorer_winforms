@@ -18,15 +18,6 @@ namespace FileExplorer
 {
     public partial class MainForm : Form
     {
-        //https://stackoverflow.com/questions/5188527/how-to-deal-with-files-with-a-name-longer-than-259-characters
-        private const string PREFIX = @"\\?\";
-
-        //Текущий путь.
-        private string mCurrentPath;
-
-        //Выбранный узел дерева с директориями.
-        private TreeNode mCurSelectedNode;
-
         //Для перемещения файлов.
         private bool mIsMove;
 
@@ -36,16 +27,30 @@ namespace FileExplorer
         //Исходный путь к файлам для копирования и вставки.
         private readonly List<string> mListSourcesPath;
 
-
         //Имя файла для поиска.
         private string mSearchFileName;
+        //----------------------------------------------------------
+
+        //Выбранный узел дерева с директориями.
+        private TreeNode mCurSelectedNode;
 
         //Дерево со всеми файловыми записями.
-        private TreeItem mFileTree;
+        private TreeItem mRootFileTree;
 
         private TreeItem mTreeCurrentNode;
 
+        //Текущий путь.
+        private string mCurrentPath;
 
+        public string CurrentPath
+        {
+            get => mCurrentPath;
+            set
+            {
+                mCurrentPath = value;
+                mAddressInput.Text = mCurrentPath;
+            }
+        }
 
 
         public MainForm()
@@ -53,7 +58,6 @@ namespace FileExplorer
             ThreadPool.SetMaxThreads(25, 25);
             ClosePreviousInstance();
             mListSourcesPath = new List<string>(200);
-            //            mTmpItemList = new ConcurrentBag<(string, bool)>();
             mIsMove = false;
             mShowHidden = false;
             mCurSelectedNode = null;
@@ -88,7 +92,7 @@ namespace FileExplorer
             Console.WriteLine("NewFolder_Click");
             try
             {
-                string path = Path.Combine(mCurrentPath, "New folder");
+                string path = Path.Combine(CurrentPath, "New folder");
                 string newFolderPath = path;
 
                 int num = 1;
@@ -101,7 +105,7 @@ namespace FileExplorer
                 DirectoryInfo dirInfo = Directory.CreateDirectory(newFolderPath);
                 AddItemOnListView(dirInfo.FullName, false);
 
-                LoadChildNodes(mCurSelectedNode);
+                UpdateTreeView();
             }
             catch (Exception ex)
             {
@@ -114,9 +118,9 @@ namespace FileExplorer
         private void NewFile_Click(object sender, EventArgs e)
         {
             Console.WriteLine("NewFile_Click");
-            NewFileForm newFileForm = new NewFileForm(mCurrentPath);
+            NewFileForm newFileForm = new NewFileForm(CurrentPath);
             newFileForm.ShowDialog();
-            ShowFilesList(mCurrentPath);
+            UpdateListView();
         }
 
 
@@ -153,13 +157,13 @@ namespace FileExplorer
             }
 
             //Обновить виджеты.
-//            ShowFilesList(mCurrentPath);
-//            LoadChildNodes(mCurSelectedNode);
+//            UpdateListView(CurrentPath);
+//            UpdateTreeView(mCurSelectedNode);
 
-            LoadChildNodes(mCurSelectedNode);
+            UpdateTreeView();
             mTreeCurrentNode.Childs.Clear();
-            FileSystem.LoadFileTree(mTreeCurrentNode);
-            ShowFilesList(mCurrentPath);
+            FileSystem.LoadFileTreeAsync(mTreeCurrentNode);
+            UpdateListView();
         }
 
 
@@ -208,10 +212,9 @@ namespace FileExplorer
 //                                    mTreeCurrentNode.Childs.Remove(childNode);
 //                                }
 //                            }
-                            
                         }
 
-                        LoadChildNodes(mCurSelectedNode);
+                        UpdateTreeView();
                     }
                     catch (Exception ex)
                     {
@@ -226,14 +229,16 @@ namespace FileExplorer
         private void Refresh_Click(object sender, EventArgs e)
         {
             Console.WriteLine("Refresh_Click");
-            ShowFilesList(mCurrentPath);
+            UpdateListView();
+            UpdateTreeView();
         }
 
 
         private void HiddenFilesTsmi_CheckStateChanged(object sender, EventArgs e)
         {
             mShowHidden = mHiddenFilesTsmi.Checked;
-            ShowFilesList(mCurrentPath);
+            UpdateListView();
+            UpdateTreeView();
         }
 
 
@@ -252,7 +257,7 @@ namespace FileExplorer
             if (mListViewFiles.SelectedItems.Count == 0)
             {
                 //Показать свойства текущей папки.
-                form = new PropertiesForm(mCurrentPath);
+                form = new PropertiesForm(CurrentPath);
             }
             else
             {
@@ -300,10 +305,14 @@ namespace FileExplorer
         private void UpArrowBtn_Click(object sender, EventArgs e)
         {
             Console.WriteLine("UpArrowBtn_Click");
-            DirectoryInfo directoryInfo = new DirectoryInfo(mCurrentPath);
 
-            if (directoryInfo.Parent != null)
-                ShowFilesList(directoryInfo.Parent.FullName);
+            TreeItem upNode = mTreeCurrentNode.ParentItem;
+            if (upNode != mRootFileTree && upNode != null)
+            {
+                mTreeCurrentNode = upNode;
+                CurrentPath = mTreeCurrentNode.ItemData.WithoutLongPathPrefix();
+                UpdateListView();
+            }
         }
 
 
@@ -313,11 +322,12 @@ namespace FileExplorer
 
             if (e.KeyCode == Keys.Enter)
             {
-                string newPath = mAddressInput.Text;
+                if (string.IsNullOrWhiteSpace(mAddressInput.Text)) return;
+                string newPath = mAddressInput.Text.AddLongPathPrefix();
+                if (!Directory.Exists(newPath)) return;
 
-                if (string.IsNullOrEmpty(newPath) || !Directory.Exists(newPath))
-                    return;
-                ShowFilesList(newPath);
+                mTreeCurrentNode = FileSystem.GetFileTreeNodeByPath(newPath, mRootFileTree);
+                UpdateListView();
             }
         }
 
@@ -342,7 +352,10 @@ namespace FileExplorer
             else if (!FileSystem.IsValidFileName(newName))
             {
                 MessageBox.Show("The file name can't contain any of the following characters:\n" + "\t\\/:*?\"<>|",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
 
                 e.CancelEdit = true;
             }
@@ -353,10 +366,13 @@ namespace FileExplorer
                 if (File.GetAttributes(selectedItem.Tag.ToString()).HasFlag(FileAttributes.Directory))
                 {
                     //Если уже есть папка с таким именем.
-                    if (Directory.Exists(Path.Combine(mCurrentPath, newName)))
+                    if (Directory.Exists(Path.Combine(CurrentPath, newName)))
                     {
-                        MessageBox.Show("Target folder already contains a folder with that name！", "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Target folder already contains a folder with that name！",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
 
                         e.CancelEdit = true;
                     }
@@ -374,10 +390,13 @@ namespace FileExplorer
                 else
                 {
                     //Если уже есть файл с таким именем.
-                    if (File.Exists(Path.Combine(mCurrentPath, newName)))
+                    if (File.Exists(Path.Combine(CurrentPath, newName)))
                     {
-                        MessageBox.Show("Target folder already contains a file with that name！", "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Target folder already contains a file with that name！",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
 
                         e.CancelEdit = true;
                     }
@@ -394,10 +413,10 @@ namespace FileExplorer
                 }
             }
 
-            LoadChildNodes(mCurSelectedNode);
+            UpdateTreeView();
             mTreeCurrentNode.Childs.Clear();
-            FileSystem.LoadFileTree(mTreeCurrentNode);
-            ShowFilesList(mCurrentPath);
+            FileSystem.LoadFileTreeAsync(mTreeCurrentNode);
+            UpdateListView();
         }
 
 
@@ -414,24 +433,18 @@ namespace FileExplorer
         {
             Console.WriteLine("DirectoryTreeView_AfterSelect");
             mCurSelectedNode = e.Node;
-            mTreeCurrentNode = mFileTree;
-            foreach (var childNode in mTreeCurrentNode.Childs)
-            {
-                if (childNode.ItemData == e.Node.Tag.ToString())
-                {
-                    mTreeCurrentNode = childNode;
-                    break;
-                }
-            }
-           
-            ShowFilesList(e.Node.Tag.ToString());
+            mTreeCurrentNode = FileSystem.GetFileTreeNodeByPath(e.Node.Tag.ToString(), mRootFileTree);
+            CurrentPath = mTreeCurrentNode.ItemData.WithoutLongPathPrefix();
+            UpdateListView();
         }
+
 
         private void DirectoryTreeView_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
             Console.WriteLine("DirectoryTreeView_BeforeExpand");
             //Загрузить дочерние узлы выбранного узла до того, как он будет развернут.
-            LoadChildNodes(e.Node);
+            mCurSelectedNode = e.Node;
+            UpdateTreeView();
         }
 
 
@@ -441,6 +454,7 @@ namespace FileExplorer
             mSearchInput.Text = String.Empty;
         }
 
+
         private void SearchInput_Leave(object sender, EventArgs e)
         {
             Console.WriteLine("SearchInput_Leave");
@@ -448,11 +462,15 @@ namespace FileExplorer
 
             if (mListViewFiles.Items.Count == 0)
             {
-                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
+                MessageBox.Show("No items match your search.",
+                    "Info",
+                    MessageBoxButtons.OK
+                );
             }
 
             mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
         }
+
 
         private void SearchInput_KeyDown(object sender, KeyEventArgs e)
         {
@@ -483,12 +501,13 @@ namespace FileExplorer
             Console.WriteLine("InitDisplay");
             try
             {
-                mFileTree = new TreeItem("ROOT", null);
-                mListIcons.Images.Add("drive", ShellIcon.DriveIcon);    //для всех дисков и папок 
-                mListIcons.Images.Add("folder", ShellIcon.FolderIcon);  //одинаковая иконка
+                mRootFileTree = new TreeItem("ROOT", null);
+                mListIcons.Images.Add("drive", ShellIcon.DriveIcon); //для всех дисков и папок 
+                mListIcons.Images.Add("folder", ShellIcon.FolderIcon); //одинаковая иконка
 
-                foreach (DriveInfo info in DriveInfo.GetDrives())
+                foreach (DriveInfo i in DriveInfo.GetDrives())
                 {
+                    DriveInfo info = DriveInfo.GetDrives()[1]; //TODO херня
                     string label = string.IsNullOrWhiteSpace(info.VolumeLabel) ? "Disk" : info.VolumeLabel;
                     label += $"({info.Name.Split('\\')[0]})";
 
@@ -497,12 +516,13 @@ namespace FileExplorer
                     driveNode.ImageKey = "drive";
                     driveNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
 
-                    TreeItem childNode = new TreeItem(PREFIX + info.Name, mFileTree);
-                    mFileTree.AddChild(childNode);
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(FileSystem.LoadFileTree), childNode);
+                    TreeItem childNode = new TreeItem(info.Name.AddLongPathPrefix(), mRootFileTree);
+                    mRootFileTree.AddChild(childNode);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(FileSystem.LoadFileTreeAsync), childNode);
+                    break; //TODO херня
                 }
 
-                mFileTree = mFileTree.Childs.First();
+                mTreeCurrentNode = mRootFileTree.Childs.First();
             }
             catch (Exception ex)
             {
@@ -512,23 +532,26 @@ namespace FileExplorer
         }
 
 
-        //Загрузить подкаталоги в текущем каталоге. (для TreeView)
-        private void LoadChildNodes(TreeNode node)
+        //Обновить TreeView для текущего узла (TreeNode mCurSelectedNode);
+        private void UpdateTreeView()
         {
             Console.WriteLine("\t\t\t\t\t\tLoadChildNodes");
             try
             {
-                //Очистите пустые узлы перед загрузкой дочерних узлов.
-                node.Nodes.Clear();
-
-                DirectoryInfo directoryInfo = new DirectoryInfo(node.Tag.ToString());
+                mCurSelectedNode.Nodes.Clear(); //удалить мнимый узел
+                DirectoryInfo directoryInfo = new DirectoryInfo(mCurSelectedNode.Tag.ToString());
 
                 //Cписок папок.
                 foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
                 {
-//                    DirectorySecurity security = Directory.GetAccessControl(dir.FullName);
-//                    if (security.AreAccessRulesProtected)
-//                        continue;
+                    try
+                    {
+                        dir.GetAccessControl();
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        continue;
+                    }
 
                     var attr = File.GetAttributes(dir.FullName);
                     if (attr.HasFlag(FileAttributes.System)
@@ -537,7 +560,7 @@ namespace FileExplorer
                         continue;
                     }
 
-                    TreeNode childNode = node.Nodes.Add(dir.Name);
+                    TreeNode childNode = mCurSelectedNode.Nodes.Add(dir.Name);
                     childNode.Tag = dir.FullName;
                     childNode.ImageKey = "folder";
                     childNode.Nodes.Add(string.Empty); //Добавляю пустой узел, чтобы появился значок '+'.
@@ -551,17 +574,10 @@ namespace FileExplorer
         }
 
 
-    
-
-
-        //Загрузить список файлов на ListView.
-        private void ShowFilesList(string path)
+        //Обновить ListView для текущего узла (TreeItem mTreeCurrentNode);
+        private void UpdateListView()
         {
             Console.WriteLine("\t\t\t\t\t\tShowFilesList");
-            //Обновить текущий путь и адресную строку.
-            mCurrentPath = path;
-            mAddressInput.Text = mCurrentPath;
-
             //BeginUpdate, EndUpdate - нужны при добавление большого количества элементов,
             //чтобы не перерисовывало после каждого.
             mListViewFiles.BeginUpdate();
@@ -569,34 +585,28 @@ namespace FileExplorer
 
             try
             {
-                TreeItem node = FileSystem.GetFileTreeNodeByPath(PREFIX + mCurrentPath, mFileTree);
+                Queue<string> files = new Queue<string>(20);
 
-                foreach (TreeItem childNode in node.Childs)
+                foreach (TreeItem childNode in mTreeCurrentNode.Childs)
                 {
                     string fullName = childNode.ItemData;
                     FileAttributes attr = File.GetAttributes(fullName);
 
-                    string name = fullName.Split('\\').Last();
+                    if (attr.HasFlag(FileAttributes.System)
+                        || (attr.HasFlag(FileAttributes.Hidden) && !mShowHidden))
+                    {
+                        continue;
+                    }
 
                     if (attr.HasFlag(FileAttributes.Directory))
-                    {
                         AddItemOnListView(fullName, false);
-                    }
+                    else
+                        files.Enqueue(fullName);
                 }
 
-
-                foreach (TreeItem childNode in node.Childs)
+                foreach (string fullName in files)
                 {
-                    string fullName = childNode.ItemData;
-                    FileAttributes attr = File.GetAttributes(fullName);
-
-                    string name = fullName.Split('\\').Last();
-
-
-                    if (!attr.HasFlag(FileAttributes.Directory))
-                    {
-                        AddItemOnListView(fullName, true);
-                    }
+                    AddItemOnListView(fullName, true);
                 }
             }
             catch (Exception ex)
@@ -616,9 +626,7 @@ namespace FileExplorer
             if (isFile)
             {
                 FileInfo fileInfo = new FileInfo(fullPath);
-
                 ListViewItem item = mListViewFiles.Items.Add(fileInfo.Name);
-
 
                 //Исполняемые файлы и ярлыки могут иметь разные иконки.
                 if (fileInfo.Extension == ".exe" || fileInfo.Extension == ".lnk" ||
@@ -626,7 +634,7 @@ namespace FileExplorer
                 {
                     if (!mListIcons.Images.ContainsKey(fileInfo.FullName))
                     {
-                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName.WithoutLongPathPrefix());
                         mListIcons.Images.Add(fileInfo.FullName, fileIcon);
                     }
 
@@ -637,7 +645,7 @@ namespace FileExplorer
                     //Для остальных типов, иконка одинаковая для всех файлов этого расширения.
                     if (!mListIcons.Images.ContainsKey(fileInfo.Extension))
                     {
-                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName);
+                        Icon fileIcon = ShellIcon.GetLargeIcon(fileInfo.FullName.WithoutLongPathPrefix());
                         mListIcons.Images.Add(fileInfo.Extension, fileIcon);
                     }
 
@@ -659,6 +667,7 @@ namespace FileExplorer
                 item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
             }
         }
+
 
         private void AddItemOnListViewAsync(string fullPath, bool isFile)
         {
@@ -685,7 +694,7 @@ namespace FileExplorer
                     if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
                     {
                         //Открыть папку.
-                        mCurrentPath = path;
+                        CurrentPath = path.WithoutLongPathPrefix();
                         foreach (var childNode in mTreeCurrentNode.Childs)
                         {
                             if (childNode.ItemData == path)
@@ -694,7 +703,7 @@ namespace FileExplorer
                                 break;
                             }
                         }
-                        ShowFilesList(path);
+                        UpdateListView();
                     }
                     else
                     {
@@ -730,7 +739,7 @@ namespace FileExplorer
             try
             {
                 FileInfo fileInfo = new FileInfo(sourcePath);
-                string destPath = Path.Combine(mCurrentPath, fileInfo.Name);
+                string destPath = Path.Combine(CurrentPath, fileInfo.Name);
 
                 if (destPath == sourcePath || File.Exists(destPath))
                 {
@@ -761,7 +770,7 @@ namespace FileExplorer
             try
             {
                 DirectoryInfo sourceDirectoryInfo = new DirectoryInfo(sourcePath);
-                string destPath = Path.Combine(mCurrentPath, sourceDirectoryInfo.Name);
+                string destPath = Path.Combine(CurrentPath, sourceDirectoryInfo.Name);
 
                 if (destPath == sourcePath || Directory.Exists(destPath))
                 {
@@ -795,7 +804,7 @@ namespace FileExplorer
         {
 //            mListViewFiles.BeginUpdate();
 
-            TreeItem node = FileSystem.GetFileTreeNodeByPath(PREFIX + mCurrentPath, mFileTree);
+            TreeItem node = FileSystem.GetFileTreeNodeByPath(CurrentPath.AddLongPathPrefix(), mRootFileTree);
 
             ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
 
