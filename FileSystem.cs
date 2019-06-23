@@ -68,6 +68,7 @@ namespace FileExplorer
         }
 
 
+        //path с префиксом
         public static TreeItem GetFileTreeNodeByPath(string path, TreeItem fileTree)
         {
             if (path == fileTree.ItemData)

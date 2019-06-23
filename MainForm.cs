@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,15 +22,17 @@ namespace FileExplorer
         //Для перемещения файлов.
         private bool mIsMove;
 
-        //Показывать скрытые файлы.
-        private bool mShowHidden;
-
+    
         //Исходный путь к файлам для копирования и вставки.
         private readonly List<string> mListSourcesPath;
 
         //Имя файла для поиска.
         private string mSearchFileName;
         //----------------------------------------------------------
+
+        //Показывать скрытые файлы.
+        private bool mShowHidden;
+
 
         //Выбранный узел дерева с директориями.
         private TreeNode mCurSelectedNode;
@@ -104,7 +107,6 @@ namespace FileExplorer
 
                 DirectoryInfo dirInfo = Directory.CreateDirectory(newFolderPath);
                 AddItemOnListView(dirInfo.FullName, false);
-
                 UpdateTreeView();
             }
             catch (Exception ex)
@@ -261,7 +263,7 @@ namespace FileExplorer
             }
             else
             {
-                // Показать свойства первого выбранного файла
+                //Показать свойства первого выбранного файла
                 form = new PropertiesForm(mListViewFiles.SelectedItems[0].Tag.ToString());
             }
 
@@ -451,7 +453,7 @@ namespace FileExplorer
         private void SearchInput_Enter(object sender, EventArgs e)
         {
             Console.WriteLine("SearchInput_Enter");
-            mSearchInput.Text = String.Empty;
+            mSearchInput.Text = string.Empty;
         }
 
 
@@ -459,15 +461,6 @@ namespace FileExplorer
         {
             Console.WriteLine("SearchInput_Leave");
             mSearchInput.Text = "Search:";
-
-            if (mListViewFiles.Items.Count == 0)
-            {
-                MessageBox.Show("No items match your search.",
-                    "Info",
-                    MessageBoxButtons.OK
-                );
-            }
-
             mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
         }
 
@@ -478,20 +471,13 @@ namespace FileExplorer
 
             if (e.KeyCode == Keys.Enter)
             {
-                string fileName = mSearchInput.Text;
-                if (string.IsNullOrEmpty(fileName))
+                if (string.IsNullOrWhiteSpace(mSearchInput.Text))
                     return;
-
-//                while (!mTmpItemList.IsEmpty)
-//                {
-//                    mTmpItemList.TryTake(out var someItem);
-//                }
 
                 mListViewFiles.Items.Clear();
                 mStatusBarFileNum.Text = "0 items";
-                mSearchFileName = fileName.ToLower();
-
-                Search();
+                mSearchFileName = mSearchInput.Text.ToLower();
+                ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), mTreeCurrentNode);
             }
         }
 
@@ -666,6 +652,7 @@ namespace FileExplorer
                 item.SubItems.Add("Folder");
                 item.SubItems.Add(string.Empty); //Для папок считать размер слишком долго.
             }
+            mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
         }
 
 
@@ -800,40 +787,14 @@ namespace FileExplorer
         }
 
 
-        private void Search()
-        {
-//            mListViewFiles.BeginUpdate();
-
-            TreeItem node = FileSystem.GetFileTreeNodeByPath(CurrentPath.AddLongPathPrefix(), mRootFileTree);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), node);
-
-            //            SearchInTree(node);
-
-//            foreach (var (path, isFile) in mTmpItemList)
-//            {
-//                AddItemOnListView(path, isFile);
-//            }
-
-//            Console.WriteLine("Joined ThreadPool");
-//            if (mTmpItemList.IsEmpty)
-//            {
-//                MessageBox.Show("No items match your search.", "Info", MessageBoxButtons.OK);
-//            }
-
-//            mStatusBarFileNum.Text = $"{mListViewFiles.Items.Count} items";
-//            mListViewFiles.EndUpdate();
-        }
-
-
         private void SearchInTree(object _node)
         {
             TreeItem node = (TreeItem) _node;
+
             foreach (TreeItem childNode in node.Childs)
             {
                 string fullName = childNode.ItemData;
                 FileAttributes attr = File.GetAttributes(fullName);
-
                 string name = fullName.Split('\\').Last().ToLower();
 
 
@@ -841,19 +802,15 @@ namespace FileExplorer
                 {
                     if (name.Contains(mSearchFileName))
                     {
-//                        mTmpItemList.Add((fullName, false));
                         AddItemOnListViewAsync(fullName, false);
                     }
-
                     ThreadPool.QueueUserWorkItem(new WaitCallback(SearchInTree), childNode);
-//                    SearchInTree(childNode);
                 }
                 else
                 {
                     if (name.Contains(mSearchFileName))
                     {
                         AddItemOnListViewAsync(fullName, true);
-//                        mTmpItemList.Add((fullName, true));
                     }
                 }
             }

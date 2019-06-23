@@ -365,7 +365,7 @@
             // mLastModifiedColHeader
             // 
             this.mLastModifiedColHeader.Text = "Last modified";
-            this.mLastModifiedColHeader.Width = 116;
+            this.mLastModifiedColHeader.Width = 133;
             // 
             // mTypeColHeader
             // 
