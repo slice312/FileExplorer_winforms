@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace FileExplorer
@@ -147,26 +148,34 @@ namespace FileExplorer
 
 
         //в байтах
-        public static long GetDirectorySize(string dir)
+        public static long GetDirectorySize(string dirPath)
         {
-            long size = 0;
-            DirectoryInfo directoryInfo = new DirectoryInfo(dir);
+            if (!Directory.Exists(dirPath))
+                throw new ArgumentException("This is not a directory");
 
-            //Добавить размеры всех файлов в текущей директории.
-            FileInfo[] fileInfos = directoryInfo.GetFiles();
-            if (fileInfos.Length > 0)
+            long getSize(string dir)
             {
-                size += fileInfos.Sum(fileInfo => fileInfo.Length);
+                long size = 0;
+                DirectoryInfo directoryInfo = new DirectoryInfo(dir);
+
+                //Добавить размеры всех файлов в текущей директории.
+                FileInfo[] fileInfos = directoryInfo.GetFiles();
+                if (fileInfos.Length > 0)
+                {
+                    size += fileInfos.Sum(fileInfo => fileInfo.Length);
+                }
+
+                //Рекурсивно добавить размеры поддиректорий.
+                DirectoryInfo[] directoryInfos = directoryInfo.GetDirectories();
+                foreach (DirectoryInfo dirInfo in directoryInfos)
+                {
+                    size += getSize(dirInfo.FullName);
+                }
+
+                return size;
             }
 
-            //Рекурсивно добавить размеры поддиректорий.
-            DirectoryInfo[] directoryInfos = directoryInfo.GetDirectories();
-            if (directoryInfos.Length > 0)
-            {
-                size += directoryInfos.Sum(dirInfo => GetDirectorySize(dirInfo.FullName));
-            }
-
-            return size;
+            return getSize(dirPath);
         }
 
 

@@ -19,27 +19,35 @@ namespace FileExplorer
             if (File.GetAttributes(filePath).HasFlag(FileAttributes.Directory))
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
+                nameTextBox.Text = directoryInfo.Name;
+                pictureBox.Image = ShellIcon.FolderIcon.ToBitmap();
+                typeLabel.Text = "File folder";
+                locationLabel.Text = directoryInfo.Parent?.FullName.WithoutLongPathPrefix();
+                sizeLabel.Text = FileSystem.FileSizeStr(FileSystem.GetDirectorySize(filePath));
+                createdTimeLabel.Text = directoryInfo.CreationTime.ToString("dd.MM.yyyy HH:mm");
+                modifiedTimeLabel.Text = directoryInfo.LastWriteTime.ToString("dd.MM.yyyy HH:mm");
 
-                mNameTextBox.Text = directoryInfo.Name;
-                mTypeTextBox.Text = "Folder";
-                mLocationTextBox.Text = (directoryInfo.Parent != null) ? directoryInfo.Parent.FullName : null;
-                mSizeTextBox.Text = FileSystem.FileSizeStr(FileSystem.GetDirectorySize(filePath));
-                mModifiedTimeTextBox.Text = directoryInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm");
+                hiddenCheckBox.Checked = directoryInfo.Attributes.HasFlag(FileAttributes.Hidden);
+                readonlyCheckBox.Checked = directoryInfo.Attributes.HasFlag(FileAttributes.ReadOnly);
             }
             else
             {
                 FileInfo fileInfo = new FileInfo(filePath);
+                nameTextBox.Text = fileInfo.Name;
+                pictureBox.Image = ShellIcon.GetLargeIcon(filePath.WithoutLongPathPrefix()).ToBitmap();
+                typeLabel.Text = "File folder";
+                locationLabel.Text = fileInfo.DirectoryName?.WithoutLongPathPrefix();
+                sizeLabel.Text = FileSystem.FileSizeStr(fileInfo.Length);
+                createdTimeLabel.Text = fileInfo.CreationTime.ToString("dd.MM.yyyy HH:mm");
+                modifiedTimeLabel.Text = fileInfo.LastWriteTime.ToString("dd.MM.yyyy HH:mm");
 
-                mNameTextBox.Text = fileInfo.Name;
-                mTypeTextBox.Text = fileInfo.Extension;
-                mLocationTextBox.Text = (fileInfo.DirectoryName != null) ? fileInfo.DirectoryName : null;
-                mSizeTextBox.Text = FileSystem.FileSizeStr(fileInfo.Length);
-                mModifiedTimeTextBox.Text = fileInfo.LastWriteTime.ToString("dd.mm.yyyy HH:mm");
+                hiddenCheckBox.Checked = fileInfo.Attributes.HasFlag(FileAttributes.Hidden);
+                readonlyCheckBox.Checked = fileInfo.Attributes.HasFlag(FileAttributes.ReadOnly);
             }
         }
 
 
-        private void OkBtn_Click(object sender, EventArgs e)
+        private void OkButton_Click(object sender, EventArgs e)
         {
             Close();
         }
