@@ -191,13 +191,13 @@ namespace FileExplorer
                 );
 
                 if (dialogResult == DialogResult.No)
-                {
                     return;
-                }
                 else
                 {
                     try
                     {
+                        Queue<string> files = new Queue<string>(20);
+
                         foreach (ListViewItem item in listViewFiles.SelectedItems)
                         {
                             string path = item.Tag.ToString();
@@ -208,13 +208,14 @@ namespace FileExplorer
                                 File.Delete(path);
 
                             listViewFiles.Items.Remove(item);
-//                            foreach (var childNode in mTreeCurrentNode.Childs)
-//                            {
-//                                if (childNode.ItemData.Split('\\').Last() == path.Split('\\').Last())
-//                                {
-//                                    mTreeCurrentNode.Childs.Remove(childNode);
-//                                }
-//                            }
+                            files.Enqueue(path);
+                        }
+
+                        for (int i = mTreeCurrentNode.Childs.Count - 1; i >= 0; i--)
+                        {
+                            TreeItem node = mTreeCurrentNode.Childs[i];
+                            if (files.Contains(node.ItemData))
+                                mTreeCurrentNode.Childs.Remove(node);
                         }
 
                         UpdateTreeView();
